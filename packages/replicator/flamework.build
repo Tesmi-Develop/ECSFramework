@@ -1,0 +1,55 @@
+{
+	"version": 1,
+	"flameworkVersion": "1.3.1",
+	"identifiers": {
+		"@ecsframework/player-data-handler:out/components/replication-component@ReplicationComponent": "$ecsframework:replicator:components/replication-component@ReplicationComponent",
+		"@ecsframework/player-data-handler:out/components/connected-players-component@ConnectedPlayersComponent": "$ecsframework:replicator:components/connected-players-component@ConnectedPlayersComponent",
+		"@ecsframework/player-data-handler:out/systems/replication-system@ReplicationSystem": "$ecsframework:replicator:systems/replication-system@ReplicationSystem",
+		"@ecsframework/player-data-handler:out/systems/receive-replication-system@ReceiveReplicationSystem": "$ecsframework:replicator:systems/receive-replication-system@ReceiveReplicationSystem",
+		"@ecsframework/player-data-handler:out/decorators/replicated@ReplicatedTag": "$ecsframework:replicator:decorators/replicated@ReplicatedTag"
+	},
+	"metadata": {},
+	"identifierPrefix": "$ecsframework:replicator",
+	"classes": [
+		{
+			"filePath": "out\\components\\replication-component.lua",
+			"internalId": "$ecsframework:replicator:components/replication-component@ReplicationComponent",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/component@ECSComponent",
+					"name": "ECSComponent"
+				}
+			]
+		},
+		{
+			"filePath": "out\\components\\connected-players-component.lua",
+			"internalId": "$ecsframework:replicator:components/connected-players-component@ConnectedPlayersComponent",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/component@ECSComponent",
+					"name": "ECSComponent"
+				}
+			]
+		},
+		{
+			"filePath": "out\\systems\\replication-system.lua",
+			"internalId": "$ecsframework:replicator:systems/replication-system@ReplicationSystem",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/system@ECSSystem",
+					"name": "ECSSystem"
+				}
+			]
+		},
+		{
+			"filePath": "out\\systems\\receive-replication-system.lua",
+			"internalId": "$ecsframework:replicator:systems/receive-replication-system@ReceiveReplicationSystem",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/system@ECSSystem",
+					"name": "ECSSystem"
+				}
+			]
+		}
+	]
+}

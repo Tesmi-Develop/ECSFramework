@@ -29,6 +29,7 @@ export class ECSFramework {
 	private isStarted = false;
 	private baseSystemCtor!: Constructor<BaseSystem>;
 	public readonly componentsMap: ReadonlyMap<string, Constructor> = new Map();
+	public readonly ComponentsByName: ReadonlyMap<string, string> = new Map(); // ComponentName -> ComponentId
 	private components: Constructor[] = [];
 	private world!: World;
 	public readonly signals = {
@@ -70,11 +71,16 @@ export class ECSFramework {
 						return;
 
 					(this.componentsMap as Map<string, Constructor>).set(GetIdentifier(ctor), ctor);
+					(this.ComponentsByName as Map<string, string>).set(`${ctor}`, GetIdentifier(ctor));
 					return ctor;
 				})
 				.filterUndefined() ?? [];
 
 		return this.components;
+	}
+
+	public GetComponentKeyByName(name: string) {
+		return this.ComponentsByName.get(name);
 	}
 
 	private initSystems() {

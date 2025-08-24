@@ -5,5 +5,5 @@ export type RemoveTag = {
 // EntityId -> (ComponentId | RemovedEntityTag) -> (Data | RemovedEntityTag)
 export type SyncData = Map<
 	string,
-	Map<string, { data: unknown; payloadType: "init" | "patch" } & RemoveTag> & RemoveTag
+	Map<string, { data: unknown; payloadType: "init" | "patch" } | RemoveTag> | RemoveTag
 >;

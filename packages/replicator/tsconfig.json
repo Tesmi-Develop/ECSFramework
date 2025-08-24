@@ -22,7 +22,14 @@
 		"outDir": "out",
 		"incremental": true,
 		"tsBuildInfoFile": "out/tsconfig.tsbuildinfo",
-		"declaration": true
+		"declaration": true,
+		"plugins": [
+			{
+				"transform": "rbxts-transformer-flamework",
+				"$rbxpackmode$": true,
+				"hashPrefix": "$ecsframework:replicator",
+			}
+		]
 	},
 	"exclude": ["test/**/*", "out/**/*"]
 }

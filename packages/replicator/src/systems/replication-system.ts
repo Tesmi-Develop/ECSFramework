@@ -7,7 +7,15 @@ import { ReplicationComponent, ReplicationData, ReplicationType } from "../compo
 import { ReplicatedTag, ReplicateOption } from "../decorators/replicated";
 import patch from "../patch";
 import { SyncData } from "../types";
-import { BaseSystem, ComponentKey, ECSSystem, QueryRecord, RobloxInstanceComponent, RunContext, useEvent } from "@ecsframework/core";
+import {
+	BaseSystem,
+	ComponentKey,
+	ECSSystem,
+	QueryRecord,
+	RobloxInstanceComponent,
+	RunContext,
+	useEvent,
+} from "@ecsframework/core";
 
 @ECSSystem({
 	RunContext: RunContext.Server,
@@ -18,7 +26,7 @@ export class ReplicationSystem extends BaseSystem {
 	private networkComponents: string[] = [];
 
 	public ConnectPlayerOnFirstConnection(player: Player): void {
-		const hydrateData: SyncData = new Map();
+		const playerData: SyncData = new Map();
 		this.addConnectedPlayer(player);
 
 		for (const entity of this.Each<ReplicationComponent>()) {
@@ -40,18 +48,21 @@ export class ReplicationSystem extends BaseSystem {
 					}),
 				);
 
-				const componentContainer = hydrateData.get(component) ?? new Map();
-				hydrateData.set(tostring(entity), componentContainer);
-				componentContainer.set(tostring(component), { payloadType: "init", data });
+				const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
+					ComponentKey<unknown>,
+					{ data: unknown; payloadType: "init" | "patch" }
+				>;
+				playerData.set(tostring(entity), componentContainer);
+				componentContainer.set(component as ComponentKey<unknown>, { payloadType: "init", data });
 			}
 		}
 
-		if (hydrateData.isEmpty()) return;
-		this.OnSync.Fire(player, hydrateData);
+		if (playerData.isEmpty()) return;
+		this.OnSync.Fire(player, playerData);
 	}
 
 	public ConnectPlayerToEntity(player: Player, entity: Entity): void {
-		const hydrateData: SyncData = new Map();
+		const playerData: SyncData = new Map();
 
 		const replicationData = this.GetComponent<ReplicationComponent>(entity);
 		if (replicationData === undefined) return;
@@ -65,11 +76,11 @@ export class ReplicationSystem extends BaseSystem {
 
 			const replicationOption = this.GetComponent<ReplicatedTag>(
 				this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
-			) as unknown as ReplicateOption;
+			) as unknown as ReplicateOption<unknown>;
 
 			if (
 				replicationOption.resolvePlayerConnection &&
-				!replicationOption.resolvePlayerConnection(player, entity, componentKey)
+				!replicationOption.resolvePlayerConnection(player, entity, componentData, this)
 			)
 				return;
 
@@ -81,12 +92,15 @@ export class ReplicationSystem extends BaseSystem {
 				}),
 			);
 
-			const componentContainer = hydrateData.get(componentKey) ?? new Map();
-			hydrateData.set(tostring(entity), componentContainer);
-			componentContainer.set(componentKey, { payloadType: "init", data: componentData });
+			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
+				ComponentKey<unknown>,
+				{ data: unknown; payloadType: "init" | "patch" }
+			>;
+			playerData.set(tostring(entity), componentContainer);
+			componentContainer.set(componentKey as ComponentKey<unknown>, { payloadType: "init", data: componentData });
 		}
 
-		this.OnSync.Fire(player, hydrateData);
+		this.OnSync.Fire(player, playerData);
 	}
 
 	private prepareAddedEntitySyncData(
@@ -101,7 +115,10 @@ export class ReplicationSystem extends BaseSystem {
 			const playerData = playerPayload.get(player) ?? new Map();
 			playerPayload.set(player, playerData);
 
-			const componentContainer = playerData.get(tostring(entity)) ?? new Map();
+			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
+				ComponentKey<unknown>,
+				{ data: unknown; payloadType: "init" | "patch" }
+			>;
 			playerData.set(tostring(entity), componentContainer);
 			componentContainer.set(componentKey, {
 				payloadType: "init",
@@ -124,7 +141,10 @@ export class ReplicationSystem extends BaseSystem {
 			const playerData = playerPayload.get(player) ?? new Map();
 			playerPayload.set(player, playerData);
 
-			const componentContainer = playerData.get(tostring(entity)) ?? new Map();
+			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
+				ComponentKey<unknown>,
+				{ data: unknown; payloadType: "init" | "patch" }
+			>;
 			playerData.set(tostring(entity), componentContainer);
 			componentContainer.set(componentKey, { payloadType: "patch", data: payload });
 		}
@@ -142,7 +162,10 @@ export class ReplicationSystem extends BaseSystem {
 			const playerData = playerPayload.get(player) ?? new Map();
 
 			playerPayload.set(player, playerData);
-			const componentContainer = playerData.get(tostring(entity)) ?? new Map();
+			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
+				ComponentKey<unknown>,
+				{ data: unknown; payloadType: "init" | "patch" }
+			>;
 			playerData.set(tostring(entity), componentContainer);
 
 			componentContainer.set(componentKey, {
@@ -174,11 +197,18 @@ export class ReplicationSystem extends BaseSystem {
 		);
 	}
 
+	private getReplicationType(entity: Entity): ReplicationType {
+		const instanceData = this.GetComponent<RobloxInstanceComponent>(entity);
+		if (!instanceData) return ReplicationType.OnFirstPlayerConnection;
+
+		return instanceData.Instance.IsA("BasePart")
+			? ReplicationType.PerPlayerConnection
+			: ReplicationType.OnFirstPlayerConnection;
+	}
+
 	private setupReplicationComponent(entity: Entity): void {
 		this.SetComponent<ReplicationComponent>(entity, {
-			replicationType: this.HasComponent<RobloxInstanceComponent>(entity)
-				? ReplicationType.OnFirstPlayerConnection
-				: ReplicationType.PerPlayerConnection,
+			replicationType: this.getReplicationType(entity),
 		});
 	}
 
@@ -195,14 +225,21 @@ export class ReplicationSystem extends BaseSystem {
 
 		const replicationOption = this.GetComponent<ReplicatedTag>(
 			this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
-		) as unknown as ReplicateOption;
+		) as unknown as ReplicateOption<unknown>;
 		const connectedPlayers = replicationOption.resolvePlayerConnection
 			? new Set<Player>()
 			: table.clone(allConnectedPlayers);
 
 		if (replicationOption.resolvePlayerConnection) {
 			allConnectedPlayers.forEach((player) => {
-				if (replicationOption.resolvePlayerConnection!(player, entity, componentKey)) {
+				if (
+					replicationOption.resolvePlayerConnection!(
+						player,
+						entity,
+						this.GetComponent(entity, componentKey as ComponentKey<unknown>),
+						this,
+					)
+				) {
 					connectedPlayers.add(player);
 				}
 			});
@@ -302,7 +339,7 @@ export class ReplicationSystem extends BaseSystem {
 				this.SetComponent<ReplicationComponent>(
 					entity,
 					produce(replicationComponent, (draft) => {
-						draft.replicationType = ReplicationType.PerPlayerConnection;
+						draft.replicationType = this.getReplicationType(entity);
 					}),
 				);
 				continue;

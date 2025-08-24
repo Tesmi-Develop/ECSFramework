@@ -31,6 +31,8 @@ import {
 import { Signal } from "./flamecs/signal";
 import { InjectType } from "./decorators/inject-type";
 import { QueryChange } from "./hooks/query-change";
+import { produce } from "@rbxts/immut";
+import { WritableDraft } from "@rbxts/immut/src/types-external";
 
 type TrailingUndefined<T extends Array<unknown>> = T extends [...infer Rest, undefined]
 	? [...TrailingUndefined<Rest>, undefined?]
@@ -156,6 +158,24 @@ export abstract class BaseSystem {
 		}
 
 		return set(this.world, entity, argument1 as never, argument2 as never, argument3 as never);
+	}
+
+	/** @metadata macro */
+	public MutateComponent<T>(
+		entity: Entity,
+		onMutate: (darft: WritableDraft<Unwrap<T>>, original: Unwrap<T>) => void,
+		key?: ComponentKey<T>,
+	): void {
+		const data = this.GetComponent(entity, key as ComponentKey<unknown>);
+		if (!data) {
+			throw `Component ${key} does not exist on entity ${entity}.`;
+		}
+
+		this.SetComponent(
+			entity,
+			produce(data, (draft) => onMutate(draft as never, data as never)),
+			key,
+		);
 	}
 
 	/**
@@ -348,6 +368,10 @@ export abstract class BaseSystem {
 		);
 	}
 
+	public GetComponentKeyByName(name: string) {
+		return this.framework.GetComponentKeyByName(name);
+	}
+
 	/** @metadata macro */
 	public GetClassComponent<T>(key?: ComponentKey<T>) {
 		const ctor = this.framework.componentsMap.get(key!);
@@ -394,7 +418,7 @@ export abstract class BaseSystem {
 	 * @returns A signal that fires when the component is removed from any entity.
 	 * @metadata macro
 	 */
-	public Removed<T>(key?: ComponentKey<T>): Signal<[Entity<T>]> {
+	public Removed<T>(key?: ComponentKey<T>): Signal<[entity: Entity<T>]> {
 		return removed(this.world, key);
 	}
 
@@ -407,7 +431,7 @@ export abstract class BaseSystem {
 	 *   entity.
 	 * @metadata macro
 	 */
-	public Changed<T>(key?: ComponentKey<T>): Signal<[Entity<T>, T]> {
+	public Changed<T>(key?: ComponentKey<T>): Signal<[entity: Entity<T>, data: T]> {
 		return changed(this.world, key);
 	}
 

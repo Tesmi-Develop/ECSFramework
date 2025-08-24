@@ -1,0 +1,47 @@
+{
+	"version": 1,
+	"flameworkVersion": "1.3.1",
+	"identifiers": {
+		"@ecsframework/core:out/framework/base-system@BaseSystem": "$ecsframework:core:framework/base-system@BaseSystem",
+		"@ecsframework/core:out/framework/dependencies-container@DependenciesContainer": "$ecsframework:core:framework/dependencies-container@DependenciesContainer",
+		"@ecsframework/core:out/framework/init@ECSFramework": "$ecsframework:core:framework/init@ECSFramework",
+		"@ecsframework/core:out/framework/components/roblox-instance-component@RobloxInstanceComponent": "$ecsframework:core:framework/components/roblox-instance-component@RobloxInstanceComponent",
+		"@ecsframework/core:out/framework/decorators/component@ECSComponent": "$ecsframework:core:framework/decorators/component@ECSComponent",
+		"@ecsframework/core:out/framework/systems/roblox-instance-system@RobloxInstanceSystem": "$ecsframework:core:framework/systems/roblox-instance-system@RobloxInstanceSystem",
+		"@ecsframework/core:out/framework/decorators/system@ECSSystem": "$ecsframework:core:framework/decorators/system@ECSSystem",
+		"@ecsframework/core:out/framework/flamecs/registry@ChildOf": "$ecsframework:core:framework/flamecs/registry@ChildOf",
+		"@ecsframework/core:out/framework/flamecs/registry@Wildcard": "$ecsframework:core:framework/flamecs/registry@Wildcard",
+		"@ecsframework/core:out/framework/components/destroyed-component@DestroyComponent": "$ecsframework:core:framework/components/destroyed-component@DestroyComponent",
+		"@ecsframework/core:out/framework/decorators/inject-type@InjectType": "$ecsframework:core:framework/decorators/inject-type@InjectType",
+		"@ecsframework/core:out/framework/decorators/tagged@TaggedInstance": "$ecsframework:core:framework/decorators/tagged@TaggedInstance"
+	},
+	"metadata": {},
+	"identifierPrefix": "$ecsframework:core",
+	"classes": [
+		{
+			"filePath": "out\\framework\\base-system.lua",
+			"internalId": "$ecsframework:core:framework/base-system@BaseSystem",
+			"decorators": []
+		},
+		{
+			"filePath": "out\\framework\\components\\roblox-instance-component.lua",
+			"internalId": "$ecsframework:core:framework/components/roblox-instance-component@RobloxInstanceComponent",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/component@ECSComponent",
+					"name": "ECSComponent"
+				}
+			]
+		},
+		{
+			"filePath": "out\\framework\\systems\\roblox-instance-system.lua",
+			"internalId": "$ecsframework:core:framework/systems/roblox-instance-system@RobloxInstanceSystem",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/system@ECSSystem",
+					"name": "ECSSystem"
+				}
+			]
+		}
+	]
+}

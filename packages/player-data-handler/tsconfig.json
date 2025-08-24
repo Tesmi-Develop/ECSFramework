@@ -15,7 +15,7 @@
 		"moduleDetection": "force",
 		"strict": true,
 		"target": "ESNext",
-		"typeRoots": ["node_modules/@rbxts", "node_modules/@flamework"],
+		"typeRoots": ["node_modules/@rbxts", "node_modules/@flamework", "node_modules/@ecsframework"],
 
 		// configurable
 		"rootDir": "src",
@@ -27,7 +27,7 @@
 			{
 				"transform": "rbxts-transformer-flamework",
 				"$rbxpackmode$": true,
-				"hashPrefix": "$ecsframework:core",
+				"hashPrefix": "$ecsframework:player-data-handler",
 			}
 		]
 	},

@@ -1,5 +1,5 @@
 {
-  "name": "@ecsframework/replicator",
+  "name": "@ecsframework/player-data-handler",
   "version": "0.0.1",
   "description": "",
   "main": "out/init.lua",
@@ -37,12 +37,13 @@
   "dependencies": {
     "@rbxts/immut": "^0.4.4-ts.0",
     "@rbxts/services": "^1.5.5",
-    "@rbxts/signal": "^1.1.1"
+    "@rbxts/signal": "^1.1.1",
+    "@rbxts/t": "^3.2.1"
   },
   "peerDependencies": {
     "@ecsframework/core": "*",
-    "@rbxts/jecs": ">=0.9.0-rc.10",
     "@flamework/core": "*",
+    "@rbxts/jecs": ">=0.9.0-rc.10",
     "rbxts-transformer-flamework": "*"
   }
 }

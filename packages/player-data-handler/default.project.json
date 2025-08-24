@@ -1,5 +1,5 @@
 {
-	"name": "replicator",
+	"name": "player-data-handler",
 	"globIgnorePaths": [
 		"**/package.json",
 		"**/tsconfig.json"

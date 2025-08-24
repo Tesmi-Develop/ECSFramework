@@ -1,6 +1,6 @@
 import Signal from "@rbxts/signal";
 import patch from "../patch";
-import { SyncData } from "../types";
+import { RemoveTag, SyncData } from "../types";
 import { ECSSystem, RunContext, RobloxInstanceComponent, SERVER_ATTRIBUTE_ENTITY_ID } from "@ecsframework/core";
 import { BaseSystem } from "@ecsframework/core/out/framework/base-system";
 import { ComponentKey } from "@ecsframework/core/out/framework/flamecs/registry";
@@ -34,14 +34,17 @@ export class ReceiveReplicationSystem extends BaseSystem {
 	public Sync(payload: SyncData) {
 		for (const [serverEntity, components] of payload) {
 			const clientEntity = this.getClientEntity(serverEntity);
-			if (components.__removed) {
+			if ((components as RemoveTag).__removed) {
 				this.DespawnEntity(clientEntity);
 				this.serverEntitiesToClient.delete(serverEntity);
 				continue;
 			}
 
-			for (const [componentId, payload] of components) {
-				if (payload.__removed) {
+			for (const [componentId, payload] of components as Map<
+				string,
+				{ data: unknown; payloadType: "init" | "patch" }
+			>) {
+				if ((payload as RemoveTag).__removed) {
 					this.RemoveComponent(clientEntity, componentId as ComponentKey<unknown>);
 					continue;
 				}
@@ -67,18 +70,28 @@ export class ReceiveReplicationSystem extends BaseSystem {
 				this.SetComponent(clientEntity, newState, componentId as ComponentKey<unknown>);
 			}
 		}
+	}
 
+	public OnStartup(): void {
 		this.Added<RobloxInstanceComponent>().connect((entity, data) => {
 			const instance = data.Instance;
 			const serverEntityId = instance.GetAttribute(SERVER_ATTRIBUTE_ENTITY_ID) as number;
 			if (serverEntityId === undefined) return;
 
 			this.serverEntitiesToClient.set(tostring(serverEntityId), entity);
-			this.OnEntityConnect.Fire(entity);
+			this.OnEntityConnect.Fire(serverEntityId as Entity);
 		});
-	}
 
-	public OnStartup(): void {
+		for (const entity of this.Each<RobloxInstanceComponent>()) {
+			const data = this.GetComponent<RobloxInstanceComponent>(entity)!;
+			const instance = data.Instance;
+			const serverEntityId = instance.GetAttribute(SERVER_ATTRIBUTE_ENTITY_ID) as number;
+			if (serverEntityId === undefined) return;
+
+			this.serverEntitiesToClient.set(tostring(serverEntityId), entity);
+			this.OnEntityConnect.Fire(serverEntityId as Entity);
+		}
+
 		this.OnFirstConnect.Fire();
 	}
 

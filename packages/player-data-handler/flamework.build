@@ -1,0 +1,23 @@
+{
+	"version": 1,
+	"flameworkVersion": "1.3.1",
+	"identifiers": {
+		"@ecsframework/player-data-handler:out/profile-wrapper@ProfileWrapper": "$ecsframework:player-data-handler:profile-wrapper@ProfileWrapper",
+		"@ecsframework/player-data-handler:out/systems/saving-system@SavingSystem": "$ecsframework:player-data-handler:systems/saving-system@SavingSystem",
+		"@ecsframework/player-data-handler:out/decorators/saved@SavedTag": "$ecsframework:player-data-handler:decorators/saved@SavedTag"
+	},
+	"metadata": {},
+	"identifierPrefix": "$ecsframework:player-data-handler",
+	"classes": [
+		{
+			"filePath": "out\\systems\\saving-system.lua",
+			"internalId": "$ecsframework:player-data-handler:systems/saving-system@SavingSystem",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/system@ECSSystem",
+					"name": "ECSSystem"
+				}
+			]
+		}
+	]
+}

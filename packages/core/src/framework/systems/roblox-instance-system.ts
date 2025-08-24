@@ -23,6 +23,9 @@ export class RobloxInstanceSystem extends BaseSystem {
 
 	public OnStartup() {
 		this.Added<RobloxInstanceComponent>().connect((entity, data) => {
+			if (data.Instance.GetAttribute(INSTANCE_ATTRIBUTE_ENTITY_ID) !== undefined) {
+				throw "Instance already has an entity";
+			}
 			data.Instance.SetAttribute(INSTANCE_ATTRIBUTE_ENTITY_ID, entity);
 		});
 
@@ -41,7 +44,9 @@ export class RobloxInstanceSystem extends BaseSystem {
 					Instance: instance,
 				});
 
-				instance.Destroying.Once(() => {
+				instance.AncestryChanged.Once((_, parent) => {
+					if (parent !== undefined) return;
+					if (!this.ExistEntity(entity)) return;
 					this.DespawnEntity(entity);
 				});
 			});
@@ -53,7 +58,9 @@ export class RobloxInstanceSystem extends BaseSystem {
 					Instance: instance,
 				});
 
-				instance.Destroying.Once(() => {
+				instance.AncestryChanged.Once((_, parent) => {
+					if (parent !== undefined) return;
+					if (!this.ExistEntity(entity)) return;
 					this.DespawnEntity(entity);
 				});
 			});
