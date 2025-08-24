@@ -9,8 +9,18 @@ import { Replicated } from "@ecsframework/replicator";
 		return instanceData.Instance === player;
 	},
 })
-@Saved()
+@Saved({
+	Migrations: [
+		(data) => {
+			return {
+				Money: (data as { Money: number }).Money,
+				Gems: 0,
+			} as PlayerDataComponent;
+		},
+	],
+})
 @ECSComponent()
 export class PlayerDataComponent {
 	public Money = 0;
+	public Gems = 0;
 }

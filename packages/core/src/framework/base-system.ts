@@ -171,10 +171,11 @@ export abstract class BaseSystem {
 			throw `Component ${key} does not exist on entity ${entity}.`;
 		}
 
-		this.SetComponent(
+		set<T>(
+			this.world,
 			entity,
-			produce(data, (draft) => onMutate(draft as never, data as never)),
-			key,
+			produce(data, (draft) => onMutate(draft as never, data as never)) as never,
+			key as never,
 		);
 	}
 

@@ -107,7 +107,7 @@ export function hookListeners(registry: ecs.World, id: Entity): void {
 	registry.set(id, ecs.OnRemove, (entity) => {
 		removedSignal.fire(entity);
 	});
-	registry.set(id, ecs.OnChange, (entity, data) => {
+	registry.set(id, ecs.OnChange, (entity, _, data) => {
 		changedSignal.fire(entity, data);
 	});
 }

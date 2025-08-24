@@ -92,7 +92,7 @@ export abstract class ProfileWrapper {
 				if (!componentInfo.Guard(data)) {
 					throw `Data for ${componentName} is invalid`;
 				}
-				componentData = { Data: data, Version: 0 };
+				componentData = { Data: data, Version: componentInfo.Migrations.size() };
 
 				this.changeData(
 					produce(this.data, (draft) => {
