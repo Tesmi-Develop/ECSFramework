@@ -2,7 +2,7 @@ import { BaseSystem, ECSSystem, InjectType } from "@ecsframework/core";
 import { ProfileWrapper } from "../profile-wrapper";
 import { Constructor } from "@flamework/core/out/utility";
 import { Entity } from "@rbxts/jecs";
-import { DependenciesContainer } from "@ecsframework/core/out/framework/dependencies-container";
+import { DependenciesContainer } from "@ecsframework/core";
 
 @ECSSystem()
 export class SavingSystem extends BaseSystem {

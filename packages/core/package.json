@@ -1,6 +1,6 @@
 {
   "name": "@ecsframework/core",
-  "version": "0.0.3",
+  "version": "0.0.9",
   "description": "",
   "main": "out/init.lua",
   "scripts": {
@@ -34,13 +34,11 @@
     "roblox-ts": "^3.0.0",
     "typescript": "^5.5.3"
   },
-  "dependencies": {
-    "@rbxts/immut": "^0.4.4-ts.0",
-    "@rbxts/services": "^1.5.5",
-    "@rbxts/signal": "^1.1.1"
-  },
   "peerDependencies": {
+    "@rbxts/immut": ">=0.4.4-ts.0",
+    "@rbxts/services": ">=1.5.5",
     "@rbxts/jecs": ">=0.9.0-rc.10",
+    "@rbxts/signal": ">=1.1.1",
     "@flamework/core": "*",
     "rbxts-transformer-flamework": "*"
   }

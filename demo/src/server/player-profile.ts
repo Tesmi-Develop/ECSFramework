@@ -1,5 +1,5 @@
-import { Flamework } from "@ecsframework/core";
 import { ComponentData, ProfileWrapper } from "@ecsframework/player-data-handler";
+import { Flamework } from "@flamework/core";
 import { createCollection, Document } from "@rbxts/lapis";
 
 interface PlayerData {

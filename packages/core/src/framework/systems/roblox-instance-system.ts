@@ -10,7 +10,7 @@ import { INSTANCE_ATTRIBUTE_ENTITY_ID } from "../utilities";
 import { InjectType } from "../decorators/inject-type";
 
 @ECSSystem({
-	Priority: -math.huge,
+	Priority: math.huge,
 })
 export class RobloxInstanceSystem extends BaseSystem {
 	@InjectType

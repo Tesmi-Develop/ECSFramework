@@ -1,15 +1,17 @@
-import { Reflect } from "@flamework/core";
+import { Modding, Reflect } from "@flamework/core";
 import { component } from "@rbxts/jecs";
 import { BaseSystem } from "../base-system";
 import { GetIdentifier, RunContext } from "../utilities";
+import { Constructor } from "@flamework/core/out/utility";
+import { t } from "@rbxts/t";
 
 export interface ECSComponentOptions {
 	RunContext?: RunContext;
 }
 
-/** @metadata reflect identifier */
-export function ECSComponent(options: ECSComponentOptions = {}) {
-	return function (target: object) {
+/** @metadata reflect identifier macro */
+export function ECSComponent<T>(options: ECSComponentOptions = {}) {
+	return function (target: Constructor<T>) {
 		const components: object[] = Reflect.getMetadata(BaseSystem, "ECSFramework:Components") ?? [];
 		const componentId = component();
 

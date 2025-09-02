@@ -38,17 +38,17 @@ export class ECSFramework {
 		removed: new ReadonlyMap<Entity, Signal<[Entity]>>(),
 	};
 
-	constructor(private container: DependenciesContainer = new DependenciesContainer()) {
+	constructor(public readonly Container: DependenciesContainer = new DependenciesContainer()) {
 		this.baseSystemCtor = Modding.getObjectFromId(Flamework.id<BaseSystem>()) as Constructor<BaseSystem>;
 
-		container.Register<ECSFramework>(() => this);
-		container.Register<DependenciesContainer>(() => container);
+		Container.Register<ECSFramework>(() => this);
+		Container.Register<DependenciesContainer>(() => Container);
 
 		this.initComponents();
 		this.world = world();
 		this.initComponentLifecycles();
 
-		container.Register<World>(() => this.world);
+		Container.Register<World>(() => this.world);
 	}
 
 	public GetAllComponents() {
@@ -85,8 +85,7 @@ export class ECSFramework {
 
 	private initSystems() {
 		const systems: Constructor[] = Reflect.getMetadata(this.baseSystemCtor, "ECSFramework:Systems") ?? [];
-		this.systems = this.container
-			.InstantiateGroup(systems, true)
+		this.systems = this.Container.InstantiateGroup(systems, true)
 			.map((instance): SystemInfo | undefined => {
 				const options =
 					Reflect.getOwnMetadata<SystemOptions>(getmetatable(instance) as object, "ECSFramework:Options") ??

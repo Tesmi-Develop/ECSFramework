@@ -2,11 +2,11 @@
 	"version": 1,
 	"flameworkVersion": "1.3.1",
 	"identifiers": {
-		"@ecsframework/player-data-handler:out/components/replication-component@ReplicationComponent": "$ecsframework:replicator:components/replication-component@ReplicationComponent",
-		"@ecsframework/player-data-handler:out/components/connected-players-component@ConnectedPlayersComponent": "$ecsframework:replicator:components/connected-players-component@ConnectedPlayersComponent",
-		"@ecsframework/player-data-handler:out/systems/replication-system@ReplicationSystem": "$ecsframework:replicator:systems/replication-system@ReplicationSystem",
-		"@ecsframework/player-data-handler:out/systems/receive-replication-system@ReceiveReplicationSystem": "$ecsframework:replicator:systems/receive-replication-system@ReceiveReplicationSystem",
-		"@ecsframework/player-data-handler:out/decorators/replicated@ReplicatedTag": "$ecsframework:replicator:decorators/replicated@ReplicatedTag"
+		"@ecsframework/replicator:out/components/replication-component@ReplicationComponent": "$ecsframework:replicator:components/replication-component@ReplicationComponent",
+		"@ecsframework/replicator:out/components/connected-players-component@ConnectedPlayersComponent": "$ecsframework:replicator:components/connected-players-component@ConnectedPlayersComponent",
+		"@ecsframework/replicator:out/systems/replication-system@ReplicationSystem": "$ecsframework:replicator:systems/replication-system@ReplicationSystem",
+		"@ecsframework/replicator:out/systems/receive-replication-system@ReceiveReplicationSystem": "$ecsframework:replicator:systems/receive-replication-system@ReceiveReplicationSystem",
+		"@ecsframework/replicator:out/decorators/replicated@ReplicatedTag": "$ecsframework:replicator:decorators/replicated@ReplicatedTag"
 	},
 	"metadata": {},
 	"identifierPrefix": "$ecsframework:replicator",

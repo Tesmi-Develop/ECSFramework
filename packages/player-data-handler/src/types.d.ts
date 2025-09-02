@@ -1,5 +1,5 @@
 import { BaseSystem } from "@ecsframework/core";
-import { DependenciesContainer } from "@ecsframework/core/out/framework/dependencies-container";
+import { DependenciesContainer } from "@ecsframework/core";
 import { World } from "@rbxts/jecs";
 import { t } from "@rbxts/t";
 

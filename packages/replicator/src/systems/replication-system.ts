@@ -40,6 +40,16 @@ export class ReplicationSystem extends BaseSystem {
 				const replicationData = this.getReplicationData(entity, component as ComponentKey<unknown>);
 				if (replicationData === undefined || replicationData.connectedPlayers.has(player)) continue;
 
+				const replicationOption = this.GetComponent<ReplicatedTag>(
+					this.GetComponentId(component as ComponentKey<unknown>) as Entity,
+				) as unknown as ReplicateOption<unknown>;
+
+				if (
+					replicationOption.resolvePlayerConnection &&
+					!replicationOption.resolvePlayerConnection(player, entity, replicationData, this)
+				)
+					continue;
+
 				this.setReplicationData(
 					entity,
 					component as ComponentKey<unknown>,
@@ -69,10 +79,10 @@ export class ReplicationSystem extends BaseSystem {
 
 		for (const componentKey of this.networkComponents) {
 			const componentData = this.GetComponent(entity, componentKey as ComponentKey<unknown>);
-			if (componentData === undefined) return;
+			if (componentData === undefined) continue;
 
 			const replicationComponent = this.getReplicationData(entity, componentKey as ComponentKey<unknown>);
-			if (replicationComponent === undefined || replicationComponent.connectedPlayers.has(player)) return;
+			if (replicationComponent === undefined || replicationComponent.connectedPlayers.has(player)) continue;
 
 			const replicationOption = this.GetComponent<ReplicatedTag>(
 				this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
@@ -82,7 +92,7 @@ export class ReplicationSystem extends BaseSystem {
 				replicationOption.resolvePlayerConnection &&
 				!replicationOption.resolvePlayerConnection(player, entity, componentData, this)
 			)
-				return;
+				continue;
 
 			this.setReplicationData(
 				entity,
@@ -100,6 +110,7 @@ export class ReplicationSystem extends BaseSystem {
 			componentContainer.set(componentKey as ComponentKey<unknown>, { payloadType: "init", data: componentData });
 		}
 
+		if (playerData.isEmpty()) return;
 		this.OnSync.Fire(player, playerData);
 	}
 
@@ -214,6 +225,7 @@ export class ReplicationSystem extends BaseSystem {
 
 	private sendSyncData(data: Map<Player, SyncData>): void {
 		for (const [player, payload] of data) {
+			if (payload.isEmpty()) continue;
 			this.OnSync.Fire(player, payload);
 		}
 	}

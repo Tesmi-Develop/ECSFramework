@@ -41,7 +41,7 @@
     "@rbxts/t": "^3.2.1"
   },
   "peerDependencies": {
-    "@ecsframework/core": "*",
+    "@ecsframework/core": "^0.0.4",
     "@flamework/core": "*",
     "@rbxts/jecs": ">=0.9.0-rc.10",
     "rbxts-transformer-flamework": "*"

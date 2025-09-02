@@ -50,7 +50,9 @@ export function QueryChange<T>(componentTypeUd?: ComponentKey<T>, key?: Modding.
 		storage.connections.push(
 			world.changed(componentId, (entity, _, data) => {
 				const prevData = storage.prevEntityDatas.get(entity);
-				storage.changes.push([entity, { old: prevData as T, new: data as T }, false]);
+				if (prevData?.new === data) return;
+
+				if (prevData) storage.changes.push([entity, { old: prevData.new, new: data as T }, false]);
 				storage.prevEntityDatas.set(entity, data as never);
 			}),
 		);

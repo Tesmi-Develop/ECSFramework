@@ -1,0 +1,32 @@
+{
+	"version": 1,
+	"flameworkVersion": "1.3.1",
+	"identifiers": {
+		"@ecsframework/entity-prototype:out/entity-prototype@EntityPrototype": "$ecsframework:entity-prototype:entity-prototype@EntityPrototype",
+		"@ecsframework/entity-prototype:out/entity-prototype-system@EntityPrototypeSystem": "$ecsframework:entity-prototype:entity-prototype-system@EntityPrototypeSystem"
+	},
+	"metadata": {},
+	"identifierPrefix": "$ecsframework:entity-prototype",
+	"classes": [
+		{
+			"filePath": "out\\entity-prototype.lua",
+			"internalId": "$ecsframework:entity-prototype:entity-prototype@EntityPrototype",
+			"decorators": [
+				{
+					"internalId": "$prototype:prototype@Prototype",
+					"name": "Prototype"
+				}
+			]
+		},
+		{
+			"filePath": "out\\entity-prototype-system.lua",
+			"internalId": "$ecsframework:entity-prototype:entity-prototype-system@EntityPrototypeSystem",
+			"decorators": [
+				{
+					"internalId": "$ecsframework:core:framework/decorators/system@ECSSystem",
+					"name": "ECSSystem"
+				}
+			]
+		}
+	]
+}

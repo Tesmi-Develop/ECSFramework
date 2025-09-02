@@ -1,4 +1,5 @@
-import { ECSFramework, Flamework } from "@ecsframework/core";
+import { ECSFramework } from "@ecsframework/core";
+import { Flamework } from "@flamework/core";
 import("@ecsframework/replicator").expect();
 
 Flamework.addPaths("src/client");

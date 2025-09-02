@@ -364,7 +364,7 @@ export abstract class BaseSystem {
 
 	public GetAllClassComponents() {
 		return (
-			Reflect.getOwnMetadata<Constructor[]>(getmetatable(this) as object, "ECSFramework:Components") ??
+			Reflect.getOwnMetadata<Constructor[]>(BaseSystem as object, "ECSFramework:Components") ??
 			([] as Constructor[])
 		);
 	}
