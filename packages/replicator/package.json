@@ -1,6 +1,6 @@
 {
   "name": "@ecsframework/replicator",
-  "version": "0.0.4",
+  "version": "0.1.1",
   "description": "",
   "main": "out/init.lua",
   "scripts": {

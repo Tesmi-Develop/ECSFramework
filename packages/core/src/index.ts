@@ -11,7 +11,7 @@ export { RobloxInstanceSystem } from "./framework/systems/roblox-instance-system
 export {
 	RunContext,
 	DefineClassComponentMeta,
-	ApplyClassComponentMeta,
+	ApplyComponentMeta as ApplyClassComponentMeta,
 	INSTANCE_ATTRIBUTE_ENTITY_ID,
 	SERVER_ATTRIBUTE_ENTITY_ID,
 } from "./framework/utilities";

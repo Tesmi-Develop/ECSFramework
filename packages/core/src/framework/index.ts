@@ -1,6 +1,6 @@
 import { Flamework, Modding, Reflect } from "@flamework/core";
 import { Constructor } from "@flamework/core/out/utility";
-import { Entity, world, World } from "@rbxts/jecs";
+import { Entity, Name, world, World } from "@rbxts/jecs";
 import { RunService } from "@rbxts/services";
 import { BaseSystem } from "./base-system";
 import { ECSComponentOptions } from "./decorators/component";
@@ -9,23 +9,28 @@ import { DependenciesContainer } from "./dependencies-container";
 import { start } from "./flamecs";
 import { hookListeners, initWorld, reserve, scheduleComponent } from "./flamecs/registry";
 import { Signal } from "./flamecs/signal";
-import { ApplyClassComponentMeta, GetIdentifier, RunContext } from "./utilities";
+import { ApplyComponentMeta, GetIdentifier, RunContext } from "./utilities";
 import { Phase, Scheduler } from "@rbxts/planck";
 import planckRunService, { Phases } from "@rbxts/planck-runservice";
 
 interface SystemInfo {
 	Instance: BaseSystem;
-	OnStartup: (context: object) => void;
-	OnEffect: (context: object) => void;
-	OnUpdate: (context: object, dt: number) => void;
+	OnStartup?: (context: object) => void;
+	OnEffect?: (context: object) => void;
+	OnUpdate?: (context: object, dt: number) => void;
 	Options: SystemOptions;
 }
 
-function getCachedMethod<T extends Callback>(instance: object, methodName: string) {
-	return (instance as Record<string, T>)[methodName];
+function getCachedMethod<T extends Callback>(instance: object, methodName: string, excludeParentCtor?: object) {
+	const methodCallback = (instance as Record<string, T>)[methodName];
+	if (!excludeParentCtor) return methodCallback;
+
+	const baseMethodCallback = (excludeParentCtor as unknown as Record<string, T>)[methodName];
+	return methodCallback === baseMethodCallback ? undefined : methodCallback;
 }
 
 export class ECSFramework {
+	private static IsApplyMeta = false;
 	private systems: SystemInfo[] = [];
 	private canCallEffect = true;
 	private isStarted = false;
@@ -48,8 +53,10 @@ export class ECSFramework {
 		Container.Register<ECSFramework>(() => this);
 		Container.Register<DependenciesContainer>(() => Container);
 
-		this.initComponents();
+		this.GetAllComponents();
+		this.initComponentMetadata();
 		this.world = world();
+		this.initComponents();
 		this.initComponentLifecycles();
 
 		Container.Register<World>(() => this.world);
@@ -104,9 +111,9 @@ export class ECSFramework {
 
 				return {
 					Instance: instance as BaseSystem,
-					OnStartup: getCachedMethod(instance, "OnStartup"),
-					OnEffect: getCachedMethod(instance, "OnEffect"),
-					OnUpdate: getCachedMethod(instance, "OnUpdate"),
+					OnStartup: getCachedMethod(instance, "OnStartup", BaseSystem),
+					OnEffect: getCachedMethod(instance, "OnEffect", BaseSystem),
+					OnUpdate: getCachedMethod(instance, "OnUpdate", BaseSystem),
 					Options: options,
 				};
 			})
@@ -116,12 +123,14 @@ export class ECSFramework {
 
 	private invokeStartup() {
 		for (const system of this.systems) {
+			if (system.OnStartup === undefined) continue;
+
 			this.Scheduler.addSystem({
 				name: `${getmetatable(system.Instance)}-Startup`,
 				phase: Phase.Startup,
 				system: () => {
 					start(system.Instance.__hookStates, system.Instance, this.world, () =>
-						system.OnStartup(system.Instance),
+						system.OnStartup!(system.Instance),
 					);
 				},
 			});
@@ -130,28 +139,44 @@ export class ECSFramework {
 
 	private initUpdate() {
 		for (const system of this.systems) {
+			if (system.OnUpdate === undefined) continue;
+
 			this.Scheduler.addSystem({
 				name: `${getmetatable(system.Instance)}-Update`,
 				phase: Phases.Update,
 				system: () => {
+					const dt = this.Scheduler.getDeltaTime();
 					start(system.Instance.__hookStates, system.Instance, this.world, () =>
-						system.OnUpdate(system.Instance, this.Scheduler.getDeltaTime()),
+						system.OnUpdate!(system.Instance, dt),
 					);
 				},
 			});
 		}
 	}
 
-	private initComponents() {
-		this.GetAllComponents().forEach((component) => {
+	private initComponentMetadata() {
+		if (ECSFramework.IsApplyMeta) return;
+		this.components.forEach((component) => {
 			const runtimeId = Reflect.getOwnMetadata<Entity>(component, "ECSFramework:Id");
 			if (runtimeId === undefined) {
 				throw `Component ${component} does not have a runtime id.`;
 			}
 
 			const identifier = GetIdentifier(component);
+			ApplyComponentMeta(runtimeId, identifier, this.world);
+		});
+		ECSFramework.IsApplyMeta = true;
+	}
+
+	private initComponents() {
+		this.components.forEach((component) => {
+			const runtimeId = Reflect.getOwnMetadata<Entity>(component, "ECSFramework:Id");
+			if (runtimeId === undefined) {
+				throw `Component ${component} does not have a runtime id.`;
+			}
+
 			reserve(this.world, runtimeId, GetIdentifier(component) as never);
-			ApplyClassComponentMeta(runtimeId, identifier);
+			this.world.set(runtimeId, Name, `${component}`);
 		});
 	}
 
@@ -179,13 +204,14 @@ export class ECSFramework {
 			.filterUndefined();
 
 		for (const system of this.systems) {
+			if (system.OnEffect === undefined) continue;
 			this.Scheduler.addSystem(
 				{
 					name: `${getmetatable(system.Instance)}-OnEffect`,
 					phase: this.onEffectPhase,
 					system: () => {
 						start(system.Instance.__hookStates, system.Instance, this.world, () =>
-							system.OnEffect(system.Instance),
+							system.OnEffect!(system.Instance),
 						);
 					},
 				},

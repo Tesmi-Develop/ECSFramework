@@ -134,6 +134,11 @@ export function reserve<T>(registry: ecs.World | undefined, runtimeId: Entity<Un
 	scheduleComponent.add(runtimeId);
 }
 
+function getTypeName(spec: string): string {
+	const [match] = string.match(spec, "@([^@]+)$");
+	return (match as string) ?? spec;
+}
+
 /**
  * Defines a component that can be added to an entity. Components can either tag
  * an entity (e.g., "this entity is an NPC"), store data for an entity (e.g.,
@@ -152,6 +157,8 @@ export function component<T>(registry?: ecs.World, key?: ComponentKey<T>): Entit
 
 	if (id === undefined) {
 		id = ecs.component();
+
+		registry?.set(id, ecs.Name, getTypeName(key));
 		components.set(key, id);
 		IdTocomponents.set(id, key);
 

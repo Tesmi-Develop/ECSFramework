@@ -4,7 +4,7 @@ import { GetClassName, getDeferredConstructor, GetIdentifier, VoidCallback } fro
 import { GetInjectTypes } from "./decorators/inject-type";
 
 export class DependenciesContainer {
-	private factories = new Map<string, () => unknown>();
+	private factories = new Map<string, (context: unknown) => unknown>();
 	private instances = new Map<object, object>();
 
 	private wrapConstructorInFactory(ctor: Constructor) {
@@ -23,8 +23,11 @@ export class DependenciesContainer {
 	/** @metadata macro */
 	public Register<T extends object>(ctor: Constructor<T>, spec?: Modding.Intrinsic<"symbol-id", [T], string>): void;
 	/** @metadata macro */
-	public Register<T>(factory: () => T, spec?: Modding.Intrinsic<"symbol-id", [T], string>): void;
-	public Register<T>(factoryOrCtor: (() => T) | Constructor<T>, spec?: Modding.Intrinsic<"symbol-id", [T], string>) {
+	public Register<T>(factory: (context: unknown) => T, spec?: Modding.Intrinsic<"symbol-id", [T], string>): void;
+	public Register<T>(
+		factoryOrCtor: ((context: unknown) => T) | Constructor<T>,
+		spec?: Modding.Intrinsic<"symbol-id", [T], string>,
+	) {
 		assert(spec);
 
 		const factory = typeIs(factoryOrCtor, "function")
@@ -41,15 +44,15 @@ export class DependenciesContainer {
 	}
 
 	private resolve(spec: string, ctor?: Constructor) {
-		let result = this.factories.get(spec)?.();
+		let result = this.factories.get(spec)?.(ctor);
 		assert(result, `No factory for ${spec}`);
 
 		return result;
 	}
 
 	/** @metadata macro */
-	public Resolve<T>(spec?: Modding.Generic<T, "id">) {
-		return this.resolve(spec as never);
+	public Resolve<T>(spec?: Modding.Generic<T, "id">, ctor?: Constructor) {
+		return this.resolve(spec as never, ctor);
 	}
 
 	public Inject(instance: object, handle?: (injecting: unknown) => void) {

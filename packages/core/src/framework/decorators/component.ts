@@ -1,9 +1,8 @@
-import { Modding, Reflect } from "@flamework/core";
+import { Reflect } from "@flamework/core";
 import { component } from "@rbxts/jecs";
 import { BaseSystem } from "../base-system";
 import { GetIdentifier, RunContext } from "../utilities";
 import { Constructor } from "@flamework/core/out/utility";
-import { t } from "@rbxts/t";
 
 export interface ECSComponentOptions {
 	RunContext?: RunContext;

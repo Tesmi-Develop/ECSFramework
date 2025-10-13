@@ -4,7 +4,7 @@ import { Players } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { ConnectedPlayersComponent } from "../components/connected-players-component";
 import { ReplicationComponent, ReplicationData, ReplicationType } from "../components/replication-component";
-import { ReplicatedTag, ReplicateOption } from "../decorators/replicated";
+import { ReplicatedTag } from "../decorators/replicated";
 import patch from "../patch";
 import { SyncData } from "../types";
 import {
@@ -40,9 +40,9 @@ export class ReplicationSystem extends BaseSystem {
 				const replicationData = this.getReplicationData(entity, component as ComponentKey<unknown>);
 				if (replicationData === undefined || replicationData.connectedPlayers.has(player)) continue;
 
-				const replicationOption = this.GetComponent<ReplicatedTag>(
+				const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
 					this.GetComponentId(component as ComponentKey<unknown>) as Entity,
-				) as unknown as ReplicateOption<unknown>;
+				)!;
 
 				if (
 					replicationOption.resolvePlayerConnection &&
@@ -84,9 +84,9 @@ export class ReplicationSystem extends BaseSystem {
 			const replicationComponent = this.getReplicationData(entity, componentKey as ComponentKey<unknown>);
 			if (replicationComponent === undefined || replicationComponent.connectedPlayers.has(player)) continue;
 
-			const replicationOption = this.GetComponent<ReplicatedTag>(
+			const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
 				this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
-			) as unknown as ReplicateOption<unknown>;
+			)!;
 
 			if (
 				replicationOption.resolvePlayerConnection &&
@@ -235,9 +235,9 @@ export class ReplicationSystem extends BaseSystem {
 		const replicationComponent = this.GetComponent<ReplicationComponent>(entity);
 		if (replicationComponent === undefined) return;
 
-		const replicationOption = this.GetComponent<ReplicatedTag>(
+		const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
 			this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
-		) as unknown as ReplicateOption<unknown>;
+		)!;
 		const connectedPlayers = replicationOption.resolvePlayerConnection
 			? new Set<Player>()
 			: table.clone(allConnectedPlayers);
@@ -299,7 +299,7 @@ export class ReplicationSystem extends BaseSystem {
 	public OnStartup(): void {
 		this.connectedPlayersEntity = this.SpawnEntity<[ConnectedPlayersComponent]>([]);
 
-		for (const component of this.Each<ReplicatedTag>()) {
+		for (const component of this.Each<ReplicatedTag<unknown>>()) {
 			const networkComponent = this.GetComponentKey<string>(component)!;
 			this.networkComponents.push(networkComponent);
 		}

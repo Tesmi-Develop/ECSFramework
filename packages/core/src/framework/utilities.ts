@@ -52,7 +52,7 @@ export function DefineClassComponentMeta<T>(targetId: string, value: unknown, ke
 	datas[targetId] = componentMetadata;
 }
 
-export function ApplyClassComponentMeta(componentRuntimeId: Entity, componentId: string): void {
+export function ApplyComponentMeta(componentRuntimeId: Entity, componentId: string, world: World): void {
 	const datas = Reflect.getOwnMetadata(BaseSystem, "ECSFramework:Meta") as
 		| Record<string, Array<[ComponentKey<unknown>, unknown]>>
 		| undefined;
@@ -60,6 +60,6 @@ export function ApplyClassComponentMeta(componentRuntimeId: Entity, componentId:
 	if (!datas || !datas[componentId]) return;
 
 	for (const [key, value] of datas[componentId]) {
-		meta(componentRuntimeId, getId(undefined, key), value);
+		meta(componentRuntimeId, getId(world, key), value);
 	}
 }

@@ -14,7 +14,7 @@ export class ReceiveReplicationSystem extends BaseSystem {
 	public readonly OnEntityConnect = new Signal<(entity: Entity) => void>();
 	private serverEntitiesToClient = new Map<string, Entity>(); // serverEntityId -> clientEntityId
 
-	private getClientEntity(serverEntityId: string) {
+	public GetClientEntity(serverEntityId: string) {
 		if (!this.serverEntitiesToClient.has(serverEntityId)) {
 			const entity = this.SpawnEntity();
 			this.serverEntitiesToClient.set(serverEntityId, entity);
@@ -33,7 +33,7 @@ export class ReceiveReplicationSystem extends BaseSystem {
 
 	public Sync(payload: SyncData) {
 		for (const [serverEntity, components] of payload) {
-			const clientEntity = this.getClientEntity(serverEntity);
+			const clientEntity = this.GetClientEntity(serverEntity);
 			if ((components as RemoveTag).__removed) {
 				this.DespawnEntity(clientEntity);
 				this.serverEntitiesToClient.delete(serverEntity);
