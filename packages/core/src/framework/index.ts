@@ -10,6 +10,8 @@ import { start } from "./flamecs";
 import { hookListeners, initWorld, reserve, scheduleComponent } from "./flamecs/registry";
 import { Signal } from "./flamecs/signal";
 import { ApplyClassComponentMeta, GetIdentifier, RunContext } from "./utilities";
+import { Phase, Scheduler } from "@rbxts/planck";
+import planckRunService, { Phases } from "@rbxts/planck-runservice";
 
 interface SystemInfo {
 	Instance: BaseSystem;
@@ -32,6 +34,8 @@ export class ECSFramework {
 	public readonly ComponentsByName: ReadonlyMap<string, string> = new Map(); // ComponentName -> ComponentId
 	private components: Constructor[] = [];
 	private world!: World;
+	private onEffectPhase = new Phase("OnEffect");
+	public readonly Scheduler = new Scheduler();
 	public readonly signals = {
 		added: new ReadonlyMap<Entity, Signal<[Entity, unknown]>>(),
 		changed: new ReadonlyMap<Entity, Signal<[Entity, unknown]>>(),
@@ -111,19 +115,31 @@ export class ECSFramework {
 	}
 
 	private invokeStartup() {
-		this.systems.forEach((system) => {
-			start(system.Instance.__hookStates, system.Instance, this.world, () => system.OnStartup(system.Instance));
-		});
+		for (const system of this.systems) {
+			this.Scheduler.addSystem({
+				name: `${getmetatable(system.Instance)}-Startup`,
+				phase: Phase.Startup,
+				system: () => {
+					start(system.Instance.__hookStates, system.Instance, this.world, () =>
+						system.OnStartup(system.Instance),
+					);
+				},
+			});
+		}
 	}
 
 	private initUpdate() {
-		RunService.Heartbeat.Connect((dt) => {
-			for (const system of this.systems) {
-				start(system.Instance.__hookStates, system.Instance, this.world, () =>
-					system.OnUpdate(system.Instance, dt),
-				);
-			}
-		});
+		for (const system of this.systems) {
+			this.Scheduler.addSystem({
+				name: `${getmetatable(system.Instance)}-Update`,
+				phase: Phases.Update,
+				system: () => {
+					start(system.Instance.__hookStates, system.Instance, this.world, () =>
+						system.OnUpdate(system.Instance, this.Scheduler.getDeltaTime()),
+					);
+				},
+			});
+		}
 	}
 
 	private initComponents() {
@@ -133,8 +149,9 @@ export class ECSFramework {
 				throw `Component ${component} does not have a runtime id.`;
 			}
 
+			const identifier = GetIdentifier(component);
 			reserve(this.world, runtimeId, GetIdentifier(component) as never);
-			ApplyClassComponentMeta(component, runtimeId);
+			ApplyClassComponentMeta(runtimeId, identifier);
 		});
 	}
 
@@ -149,11 +166,7 @@ export class ECSFramework {
 			if (!this.canCallEffect) return;
 			this.canCallEffect = false;
 
-			for (const system of this.systems) {
-				start(system.Instance.__hookStates, system.Instance, this.world, () =>
-					system.OnEffect(system.Instance),
-				);
-			}
+			this.Scheduler.run(this.onEffectPhase);
 		});
 
 		const reactives: Entity[] = this.GetAllComponents()
@@ -164,6 +177,21 @@ export class ECSFramework {
 				return !unaffectable ? id : undefined;
 			})
 			.filterUndefined();
+
+		for (const system of this.systems) {
+			this.Scheduler.addSystem(
+				{
+					name: `${getmetatable(system.Instance)}-OnEffect`,
+					phase: this.onEffectPhase,
+					system: () => {
+						start(system.Instance.__hookStates, system.Instance, this.world, () =>
+							system.OnEffect(system.Instance),
+						);
+					},
+				},
+				this.onEffectPhase,
+			);
+		}
 
 		for (const ct of reactives) {
 			this.world.added(ct, () => {
@@ -183,6 +211,9 @@ export class ECSFramework {
 	public Start() {
 		if (this.isStarted) return;
 		this.isStarted = true;
+
+		this.Scheduler.insert(this.onEffectPhase);
+		this.Scheduler.addPlugin(new planckRunService.Plugin());
 
 		// Init
 		initWorld(this.world);

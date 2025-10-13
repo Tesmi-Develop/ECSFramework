@@ -2,8 +2,9 @@ import { Reflect } from "@flamework/core";
 import { Constructor } from "@flamework/core/out/utility";
 import { meta, World } from "@rbxts/jecs";
 import { Entity } from "./flamecs";
-import { getId, ResolveKey } from "./flamecs/registry";
+import { ComponentKey, getId, ResolveKey } from "./flamecs/registry";
 import { RunService } from "@rbxts/services";
+import { BaseSystem } from "./base-system";
 
 export function GetIdentifier(obj: object, suffix = ""): string {
 	return Reflect.getMetadata<string>(obj, "identifier") ?? `UnidentifiedFlameworkListener${suffix}`;
@@ -35,18 +36,30 @@ export const enum RunContext {
 export const INSTANCE_ATTRIBUTE_ENTITY_ID = `__${RunService.IsServer() ? "Server" : "Client"}_EntityId`;
 export const SERVER_ATTRIBUTE_ENTITY_ID = `__Server_EntityId`;
 
-/** @metadata macro */
-export function DefineClassComponentMeta<T>(ctor: Constructor, value?: unknown, key?: ResolveKey<T>) {
+/**
+ * @metadata macro
+ */
+export function DefineClassComponentMeta(targetId: string, value: unknown, key: string): void {
 	const metadata = [key, value] as const;
-	const datas = Reflect.getOwnMetadata<unknown[]>(ctor, "ECSFramework:Meta") ?? [];
-	Reflect.defineMetadata(ctor, "ECSFramework:Meta", [...datas, metadata]);
+
+	const datas =
+		(Reflect.getOwnMetadata(BaseSystem, "ECSFramework:Meta") as Record<string, Array<[string, unknown]>>) ?? {};
+
+	Reflect.defineMetadata(BaseSystem, "ECSFramework:Meta", datas);
+
+	const componentMetadata = datas[targetId] ?? [];
+	componentMetadata.push(metadata as [ComponentKey<unknown>, unknown]);
+	datas[targetId] = componentMetadata;
 }
 
-export function ApplyClassComponentMeta(ctor: Constructor, componentRuntimeId: Entity) {
-	const datas = Reflect.getOwnMetadata<[key: ResolveKey<unknown>, value: unknown][]>(ctor, "ECSFramework:Meta");
-	if (datas === undefined) return;
+export function ApplyClassComponentMeta(componentRuntimeId: Entity, componentId: string): void {
+	const datas = Reflect.getOwnMetadata(BaseSystem, "ECSFramework:Meta") as
+		| Record<string, Array<[ComponentKey<unknown>, unknown]>>
+		| undefined;
 
-	datas.forEach(([key, value]) => {
+	if (!datas || !datas[componentId]) return;
+
+	for (const [key, value] of datas[componentId]) {
 		meta(componentRuntimeId, getId(undefined, key), value);
-	});
+	}
 }
