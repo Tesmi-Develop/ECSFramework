@@ -39,7 +39,7 @@ export const SERVER_ATTRIBUTE_ENTITY_ID = `__Server_EntityId`;
 /**
  * @metadata macro
  */
-export function DefineClassComponentMeta(targetId: string, value: unknown, key: string): void {
+export function DefineClassComponentMeta<T>(targetId: string, value: unknown, key?: ComponentKey<T>): void {
 	const metadata = [key, value] as const;
 
 	const datas =

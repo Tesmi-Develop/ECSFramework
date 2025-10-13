@@ -3,7 +3,7 @@ import { CollectionService } from "@rbxts/services";
 import { BaseSystem } from "../base-system";
 import { RobloxInstanceComponent } from "../components/roblox-instance-component";
 import { ECSSystem } from "../decorators/system";
-import { TaggedInstance, TaggedOptions } from "../decorators/tagged";
+import { TaggedInstance } from "../decorators/tagged";
 import { DependenciesContainer } from "../dependencies-container";
 import { ComponentKey } from "../flamecs/registry";
 import { INSTANCE_ATTRIBUTE_ENTITY_ID } from "../utilities";
@@ -33,8 +33,8 @@ export class RobloxInstanceSystem extends BaseSystem {
 			this.GetComponent<RobloxInstanceComponent>(entity)?.Instance.Destroy();
 		});
 
-		for (const component of this.Each<TaggedInstance>()) {
-			const options = this.GetComponent<TaggedInstance>(component) as unknown as TaggedOptions<{}>;
+		for (const component of this.Each<TaggedInstance<unknown>>()) {
+			const options = this.GetComponent<TaggedInstance<unknown>>(component)!;
 			const key = this.GetComponentKey(component);
 			CollectionService.GetTagged(options.Tag).forEach((instance) => {
 				const entity = this.GetEntityFromInstance(instance) ?? this.world.entity();

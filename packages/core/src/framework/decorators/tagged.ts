@@ -2,17 +2,15 @@ import { Constructor } from "@flamework/core/out/utility";
 import { World } from "@rbxts/jecs";
 import { DependenciesContainer } from "../dependencies-container";
 import { Tag } from "../flamecs";
-import { DefineClassComponentMeta } from "../utilities";
+import { DefineClassComponentMeta, GetIdentifier } from "../utilities";
 
-export interface TaggedOptions<T> {
+export interface TaggedInstance<T> {
 	Tag: string;
 	OnCreateData: (instance: Instance, world: World, container: DependenciesContainer) => Partial<T>;
 }
 
-export interface TaggedInstance extends Tag {}
-
-export function Tagged<T>(options: TaggedOptions<T>) {
+export function Tagged<T>(options: TaggedInstance<T>) {
 	return function (target: Constructor<T>) {
-		DefineClassComponentMeta<TaggedInstance>(target as never, options);
+		DefineClassComponentMeta<TaggedInstance<unknown>>(GetIdentifier(target), options);
 	};
 }
