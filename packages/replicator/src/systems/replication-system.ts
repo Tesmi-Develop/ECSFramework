@@ -1,20 +1,22 @@
+// replication-system.ts
 import { produce } from "@rbxts/immut";
 import { Entity } from "@rbxts/jecs";
-import { Players } from "@rbxts/services";
+import { Players, RunService } from "@rbxts/services";
 import Signal from "@rbxts/signal";
+
 import { ConnectedPlayersComponent } from "../components/connected-players-component";
 import { ReplicationComponent, ReplicationData, ReplicationType } from "../components/replication-component";
 import { ReplicatedTag } from "../decorators/replicated";
 import patch from "../patch";
 import { SyncData } from "../types";
+
 import {
 	BaseSystem,
 	ComponentKey,
+	DestroyComponent,
 	ECSSystem,
-	QueryRecord,
 	RobloxInstanceComponent,
 	RunContext,
-	useEvent,
 } from "@ecsframework/core";
 
 @ECSSystem({
@@ -24,6 +26,7 @@ export class ReplicationSystem extends BaseSystem {
 	public readonly OnSync = new Signal<(player: Player, data: SyncData) => void>();
 	private connectedPlayersEntity!: Entity;
 	private networkComponents: string[] = [];
+	private playerPayload?: Map<Player, SyncData>;
 
 	public ConnectPlayerOnFirstConnection(player: Player): void {
 		const playerData: SyncData = new Map();
@@ -60,7 +63,7 @@ export class ReplicationSystem extends BaseSystem {
 
 				const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 					ComponentKey<unknown>,
-					{ data: unknown; payloadType: "init" | "patch" }
+					{ payloadType: "init" | "patch"; data: unknown }
 				>;
 				playerData.set(tostring(entity), componentContainer);
 				componentContainer.set(component as ComponentKey<unknown>, { payloadType: "init", data });
@@ -104,7 +107,7 @@ export class ReplicationSystem extends BaseSystem {
 
 			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 				ComponentKey<unknown>,
-				{ data: unknown; payloadType: "init" | "patch" }
+				{ payloadType: "init" | "patch"; data: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
 			componentContainer.set(componentKey as ComponentKey<unknown>, { payloadType: "init", data: componentData });
@@ -128,9 +131,10 @@ export class ReplicationSystem extends BaseSystem {
 
 			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 				ComponentKey<unknown>,
-				{ data: unknown; payloadType: "init" | "patch" }
+				{ payloadType: "init" | "patch"; data: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
+
 			componentContainer.set(componentKey, {
 				payloadType: "init",
 				data: this.GetComponent(entity, componentKey),
@@ -141,20 +145,21 @@ export class ReplicationSystem extends BaseSystem {
 	private prepareChangedEntitySyncData(
 		entity: Entity,
 		componentKey: ComponentKey<unknown>,
-		data: QueryRecord<unknown>,
+		data: unknown,
+		prevData: unknown,
 		playerPayload: Map<Player, SyncData>,
 	): void {
 		const replicationData = this.getReplicationData(entity, componentKey);
 		if (replicationData === undefined || replicationData.connectedPlayers.isEmpty()) return;
 
-		const payload = patch.diff(data.old!, data.new!);
+		const payload = patch.diff(data, prevData);
 		for (const player of replicationData.connectedPlayers) {
 			const playerData = playerPayload.get(player) ?? new Map();
 			playerPayload.set(player, playerData);
 
 			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 				ComponentKey<unknown>,
-				{ data: unknown; payloadType: "init" | "patch" }
+				{ payloadType: "init" | "patch"; data: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
 			componentContainer.set(componentKey, { payloadType: "patch", data: payload });
@@ -171,21 +176,22 @@ export class ReplicationSystem extends BaseSystem {
 
 		for (const player of replicationData.connectedPlayers) {
 			const playerData = playerPayload.get(player) ?? new Map();
-
 			playerPayload.set(player, playerData);
+
 			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 				ComponentKey<unknown>,
-				{ data: unknown; payloadType: "init" | "patch" }
+				{ payloadType: "init" | "patch"; data: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
 
-			componentContainer.set(componentKey, {
+			// mark component removed for this entity for that player
+			(componentContainer as Map<ComponentKey<unknown>, unknown>).set(componentKey, {
 				__removed: true,
 			} as never);
 		}
 	}
 
-	private prepareRemoveEntity(entity: Entity, playerPayload: Map<Player, SyncData>) {
+	private prepareRemoveEntity(entity: Entity, playerPayload: Map<Player, SyncData>): void {
 		for (const player of Players.GetPlayers()) {
 			const playerData = playerPayload.get(player) ?? new Map();
 			playerPayload.set(player, playerData);
@@ -196,7 +202,9 @@ export class ReplicationSystem extends BaseSystem {
 	}
 
 	private getReplicationData(entity: Entity, componentKey: ComponentKey<unknown>) {
-		return this.GetComponent<ReplicationComponent>(entity)?.connectedPlayersByComponent.get(componentKey);
+		return this.GetComponent<ReplicationComponent>(entity)
+			? this.GetComponent<ReplicationComponent>(entity)!.connectedPlayersByComponent.get(componentKey)
+			: undefined;
 	}
 
 	private setReplicationData(entity: Entity, componentKey: ComponentKey<unknown>, data: ReplicationData): void {
@@ -211,7 +219,6 @@ export class ReplicationSystem extends BaseSystem {
 	private getReplicationType(entity: Entity): ReplicationType {
 		const instanceData = this.GetComponent<RobloxInstanceComponent>(entity);
 		if (!instanceData) return ReplicationType.OnFirstPlayerConnection;
-
 		return instanceData.Instance.IsA("BasePart")
 			? ReplicationType.PerPlayerConnection
 			: ReplicationType.OnFirstPlayerConnection;
@@ -238,10 +245,8 @@ export class ReplicationSystem extends BaseSystem {
 		const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
 			this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
 		)!;
-		const connectedPlayers = replicationOption.resolvePlayerConnection
-			? new Set<Player>()
-			: table.clone(allConnectedPlayers);
 
+		const connectedPlayers = replicationOption.resolvePlayerConnection ? new Set<Player>() : allConnectedPlayers;
 		if (replicationOption.resolvePlayerConnection) {
 			allConnectedPlayers.forEach((player) => {
 				if (
@@ -296,6 +301,24 @@ export class ReplicationSystem extends BaseSystem {
 		);
 	}
 
+	private getPlayerPayload(): Map<Player, SyncData> {
+		if (this.playerPayload) return this.playerPayload;
+		this.playerPayload = new Map();
+
+		const connection = RunService.Heartbeat.Connect(() => {
+			if (!this.playerPayload || this.playerPayload.isEmpty()) {
+				this.playerPayload = undefined;
+				connection.Disconnect();
+				return;
+			}
+			this.sendSyncData(this.playerPayload);
+			this.playerPayload = undefined;
+			connection.Disconnect();
+		});
+
+		return this.playerPayload;
+	}
+
 	public OnStartup(): void {
 		this.connectedPlayersEntity = this.SpawnEntity<[ConnectedPlayersComponent]>([]);
 
@@ -303,73 +326,8 @@ export class ReplicationSystem extends BaseSystem {
 			const networkComponent = this.GetComponentKey<string>(component)!;
 			this.networkComponents.push(networkComponent);
 		}
-	}
 
-	public OnEffect(): void {
-		const playerPayloads = new Map<Player, SyncData>();
-		for (const componentKey of this.networkComponents) {
-			for (const [entity, record, isDestroyed] of this.QueryChange(componentKey as ComponentKey<object>)) {
-				if (isDestroyed) {
-					this.prepareRemoveEntity(entity, playerPayloads);
-					continue;
-				}
-
-				// spawned component
-				if (record.new !== undefined && record.old === undefined) {
-					if (!this.HasComponent<ReplicationComponent>(entity)) {
-						this.setupReplicationComponent(entity);
-					}
-					this.attachReplicationData(entity, componentKey as ComponentKey<unknown>);
-					this.prepareAddedEntitySyncData(entity, componentKey as ComponentKey<object>, playerPayloads);
-					continue;
-				}
-
-				// despawned component
-				if (record.new === undefined && record.old !== undefined) {
-					this.prepareRemovedEntitySyncData(entity, componentKey as ComponentKey<object>, playerPayloads);
-					this.clearReplicationData(entity, componentKey as ComponentKey<object>);
-					continue;
-				}
-
-				// changed component
-				if (record.new !== undefined && record.old !== undefined) {
-					this.prepareChangedEntitySyncData(
-						entity,
-						componentKey as ComponentKey<object>,
-						record,
-						playerPayloads,
-					);
-					continue;
-				}
-			}
-		}
-
-		for (const [entity, record] of this.QueryChange<RobloxInstanceComponent>()) {
-			if (record.new !== undefined && record.old === undefined) {
-				const replicationComponent = this.GetComponent<ReplicationComponent>(entity);
-				if (replicationComponent === undefined) continue;
-				this.SetComponent<ReplicationComponent>(
-					entity,
-					produce(replicationComponent, (draft) => {
-						draft.replicationType = this.getReplicationType(entity);
-					}),
-				);
-				continue;
-			}
-
-			if (record.new === undefined && record.old !== undefined) {
-				const replicationComponent = this.GetComponent<ReplicationComponent>(entity);
-				if (replicationComponent === undefined) continue;
-				this.SetComponent<ReplicationComponent>(
-					entity,
-					produce(replicationComponent, (draft) => {
-						draft.replicationType = ReplicationType.OnFirstPlayerConnection;
-					}),
-				);
-			}
-		}
-
-		for (const [player] of useEvent(Players.PlayerRemoving)) {
+		Players.PlayerRemoving.Connect((player) => {
 			this.removeConnectedPlayer(player);
 
 			for (const entity of this.Each<ReplicationComponent>()) {
@@ -385,10 +343,62 @@ export class ReplicationSystem extends BaseSystem {
 					);
 				}
 			}
+		});
+
+		for (const componentKey of this.networkComponents) {
+			this.Added(componentKey).connect((entity: Entity, data: unknown) => {
+				const playerPayloads = this.getPlayerPayload();
+				if (!this.HasComponent<ReplicationComponent>(entity)) this.setupReplicationComponent(entity);
+				this.attachReplicationData(entity, componentKey as ComponentKey<unknown>);
+				this.prepareAddedEntitySyncData(entity, componentKey as ComponentKey<unknown>, playerPayloads);
+			});
+
+			this.Changed(componentKey).connect((entity: Entity, data: unknown, prevData: unknown) => {
+				const playerPayloads = this.getPlayerPayload();
+				this.prepareChangedEntitySyncData(
+					entity,
+					componentKey as ComponentKey<unknown>,
+					data,
+					prevData,
+					playerPayloads,
+				);
+			});
+
+			this.Removed(componentKey).connect((entity: Entity) => {
+				if (this.HasComponent<DestroyComponent>(entity)) {
+					const playerPayloads = this.getPlayerPayload();
+					this.prepareRemoveEntity(entity, playerPayloads);
+					return;
+				}
+				this.prepareRemovedEntitySyncData(
+					entity,
+					componentKey as ComponentKey<unknown>,
+					this.getPlayerPayload(),
+				);
+				this.clearReplicationData(entity, componentKey as ComponentKey<unknown>);
+			});
 		}
 
-		if (!playerPayloads.isEmpty()) {
-			this.sendSyncData(playerPayloads);
-		}
+		this.Added<RobloxInstanceComponent>().connect((entity: Entity) => {
+			const replicationComponent = this.GetComponent<ReplicationComponent>(entity);
+			if (replicationComponent === undefined) return;
+			this.SetComponent<ReplicationComponent>(
+				entity,
+				produce(replicationComponent, (draft) => {
+					draft.replicationType = this.getReplicationType(entity);
+				}),
+			);
+		});
+
+		this.Removed<RobloxInstanceComponent>().connect((entity: Entity) => {
+			const replicationComponent = this.GetComponent<ReplicationComponent>(entity);
+			if (replicationComponent === undefined) return;
+			this.SetComponent<ReplicationComponent>(
+				entity,
+				produce(replicationComponent, (draft) => {
+					draft.replicationType = ReplicationType.OnFirstPlayerConnection;
+				}),
+			);
+		});
 	}
 }

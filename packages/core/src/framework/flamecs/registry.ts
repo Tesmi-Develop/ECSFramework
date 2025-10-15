@@ -44,9 +44,9 @@ export const scheduleComponent = new Set<ecs.Entity>();
 export const worldSignals = new Map<
 	ecs.World,
 	{
-		added: Map<Entity, Signal<[Entity, unknown]>>;
-		changed: Map<Entity, Signal<[Entity, unknown]>>;
-		removed: Map<Entity, Signal<[Entity]>>;
+		added: Map<Entity, Signal<[entity: Entity, data: unknown]>>;
+		changed: Map<Entity, Signal<[entity: Entity, data: unknown, prevData: unknown]>>;
+		removed: Map<Entity, Signal<[entity: Entity]>>;
 	}
 >();
 
@@ -85,16 +85,20 @@ export function removed<T>(registery: ecs.World, key?: ComponentKey<T>): Signal<
  *   entity.
  * @metadata macro
  */
-export function changed<T>(registery: ecs.World, key?: ComponentKey<T>): Signal<[Entity<T>, T]> {
+export function changed<T>(
+	registery: ecs.World,
+	key?: ComponentKey<T>,
+): Signal<[entity: Entity<T>, data: T, prevData: T]> {
 	const id = component(registery, key);
-	return worldSignals.get(registery)!.changed.get(id)! as Signal<[Entity<T>, T]>;
+	return worldSignals.get(registery)!.changed.get(id)! as Signal<[Entity<T>, T, T]>;
 }
 
 export function hookListeners(registry: ecs.World, id: Entity): void {
 	const addedSignal = createSignal<[Entity, unknown]>();
 	const removedSignal = createSignal<[Entity]>();
-	const changedSignal = createSignal<[Entity, unknown]>();
+	const changedSignal = createSignal<[Entity, unknown, unknown]>();
 	const signals = worldSignals.get(registry) ?? { added: new Map(), removed: new Map(), changed: new Map() };
+	const prevDatas = new Map<Entity, unknown>();
 	worldSignals.set(registry, signals);
 
 	signals.added.set(id, addedSignal);
@@ -102,13 +106,17 @@ export function hookListeners(registry: ecs.World, id: Entity): void {
 	signals.changed.set(id, changedSignal);
 
 	registry.set(id, ecs.OnAdd, (entity, _, data) => {
+		prevDatas.set(entity, data);
 		addedSignal.fire(entity, data);
 	});
 	registry.set(id, ecs.OnRemove, (entity) => {
+		prevDatas.delete(entity);
 		removedSignal.fire(entity);
 	});
 	registry.set(id, ecs.OnChange, (entity, _, data) => {
-		changedSignal.fire(entity, data);
+		const prevData = prevDatas.get(entity) ?? data;
+		changedSignal.fire(entity, data, prevData);
+		prevDatas.set(entity, data);
 	});
 }
 
