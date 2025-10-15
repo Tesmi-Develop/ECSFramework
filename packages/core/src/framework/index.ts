@@ -35,8 +35,9 @@ export class ECSFramework {
 	private canCallEffect = true;
 	private isStarted = false;
 	private baseSystemCtor!: Constructor<BaseSystem>;
-	public readonly componentsMap: ReadonlyMap<string, Constructor> = new Map();
+	public readonly ComponentsMap: ReadonlyMap<string, Constructor> = new Map();
 	public readonly ComponentsByName: ReadonlyMap<string, string> = new Map(); // ComponentName -> ComponentId
+	public readonly TagComponents: ReadonlySet<Constructor> = new Set();
 	private components: Constructor[] = [];
 	private world!: World;
 	private onEffectPhase = new Phase("OnEffect");
@@ -63,7 +64,7 @@ export class ECSFramework {
 	}
 
 	public GetAllComponents() {
-		if (this.componentsMap.size() > 0) return this.components;
+		if (this.ComponentsMap.size() > 0) return this.components;
 
 		this.components =
 			Reflect.getOwnMetadata<Constructor[]>(this.baseSystemCtor, "ECSFramework:Components")
@@ -81,13 +82,18 @@ export class ECSFramework {
 					)
 						return;
 
-					(this.componentsMap as Map<string, Constructor>).set(GetIdentifier(ctor), ctor);
+					(this.ComponentsMap as Map<string, Constructor>).set(GetIdentifier(ctor), ctor);
 					(this.ComponentsByName as Map<string, string>).set(`${ctor}`, GetIdentifier(ctor));
+					if (options.IsTag) (this.TagComponents as Set<Constructor>).add(ctor);
 					return ctor;
 				})
 				.filterUndefined() ?? [];
 
 		return this.components;
+	}
+
+	public IsClassComponentTag(ctor: Constructor) {
+		return this.TagComponents.has(ctor);
 	}
 
 	public GetComponentKeyByName(name: string) {
