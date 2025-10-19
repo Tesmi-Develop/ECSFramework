@@ -442,6 +442,13 @@ export class ReplicationSystem extends BaseSystem {
 				);
 				this.clearReplicationData(entity, componentKey as ComponentKey<unknown>);
 			});
+
+			for (const entity of this.Each(componentKey as ComponentKey<unknown>)) {
+				const playerPayloads = this.getPlayerPayload();
+				if (!this.HasComponent<ReplicationComponent>(entity)) this.setupReplicationComponent(entity);
+				this.attachReplicationData(entity, componentKey as ComponentKey<unknown>);
+				this.prepareAddedEntitySyncData(entity, componentKey as ComponentKey<unknown>, playerPayloads);
+			}
 		}
 
 		this.Added<RobloxInstanceComponent>().connect((entity: Entity) => {
@@ -465,5 +472,16 @@ export class ReplicationSystem extends BaseSystem {
 				}),
 			);
 		});
+
+		for (const entity of this.Each<RobloxInstanceComponent>()) {
+			const replicationComponent = this.GetComponent<ReplicationComponent>(entity);
+			if (replicationComponent === undefined) return;
+			this.SetComponent<ReplicationComponent>(
+				entity,
+				produce(replicationComponent, (draft) => {
+					draft.replicationType = this.getReplicationType(entity);
+				}),
+			);
+		}
 	}
 }

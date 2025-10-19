@@ -38,7 +38,7 @@ export type ExtractQueryTypes<T extends Array<unknown>> = Reconstruct<ResolveVal
 
 export type QueryHandle<T extends Array<unknown>> = {
 	__iter(): IterableFunction<LuaTuple<[Entity, ...T]>>;
-	registry: ecs.World;
+	world: ecs.World;
 	filterWith?: Array<Id>;
 	filterWithout?: Array<Id>;
 	/**
@@ -53,6 +53,7 @@ export type QueryHandle<T extends Array<unknown>> = {
 	 */
 	pair<P>(object: Entity, predicate?: ComponentKey<P>): QueryHandle<[...T, Unwrap<P>]>;
 	terms?: Array<Id>;
+	querySource: ecs.Query<Array<Id>>;
 } & IterableFunction<LuaTuple<[Entity, ...T]>>;
 
 function queryPair<T extends Array<unknown>, P>(
@@ -61,14 +62,14 @@ function queryPair<T extends Array<unknown>, P>(
 	predicate?: ComponentKey<P>,
 ): QueryHandle<[...T, Unwrap<P>]> {
 	assert(predicate);
-	const id = ecs.pair(component(this.registry, predicate), object);
+	const id = ecs.pair(component(this.world, predicate), object);
 	this.terms = this.terms ? [...this.terms, id] : [id];
 	return this as unknown as QueryHandle<[...T, Unwrap<P>]>;
 }
 
 function queryIter<T extends Array<unknown>>(this: QueryHandle<T>): IterableFunction<LuaTuple<[Entity, ...T]>> {
 	if (this.terms) {
-		let ecsQuery = this.registry.query(...this.terms);
+		let ecsQuery = this.world.query(...this.terms);
 
 		if (this.filterWithout) {
 			ecsQuery = ecsQuery.without(...this.filterWithout);
@@ -84,6 +85,33 @@ function queryIter<T extends Array<unknown>>(this: QueryHandle<T>): IterableFunc
 	return (() => {
 		// Do nothing.
 	}) as IterableFunction<LuaTuple<[Entity, ...T]>>;
+}
+
+export function createQuery<T extends Array<unknown> = []>(
+	world: ecs.World,
+	terms?: ToIds<Calculate<T>["query"]>,
+	filterWithout?: ToIds<Calculate<T>["without"]>,
+	filterWith?: ToIds<Calculate<T>["with"]>,
+): ecs.Query<Array<Id>> {
+	const processedTerms = terms?.map((v) => getId(world, v));
+	const processedFilterWithout = filterWithout?.map((v) => getId(world, v));
+	const processedFilterWith = filterWith?.map((v) => getId(world, v));
+
+	if (processedTerms) {
+		let ecsQuery = world.query(...processedTerms);
+
+		if (processedFilterWithout) {
+			ecsQuery = ecsQuery.without(...processedFilterWithout);
+		}
+
+		if (processedFilterWith) {
+			ecsQuery = ecsQuery.with(...processedFilterWith);
+		}
+
+		return ecsQuery;
+	}
+
+	return world.query();
 }
 
 /**
@@ -110,7 +138,7 @@ export function query<T extends Array<unknown> = []>(
 	const processedFilterWith = filterWith?.map((v) => getId(registry, v));
 
 	const queryHandle = {
-		registry,
+		world: registry,
 		__iter: queryIter,
 		filterWith: processedFilterWith,
 		filterWithout: processedFilterWithout,

@@ -1,3 +1,4 @@
+import("./framework/jecs-utils/jecs-importer").expect();
 export { ECSFramework } from "./framework";
 export { ECSComponent } from "./framework/decorators/component";
 export { ECSSystem } from "./framework/decorators/system";

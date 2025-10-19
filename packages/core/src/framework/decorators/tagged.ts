@@ -6,7 +6,7 @@ import { DefineComponentMeta, GetIdentifier } from "../utilities";
 
 export interface TaggedInstance<T> {
 	Tag: string;
-	OnCreateData: (instance: Instance, world: World, container: DependenciesContainer) => Partial<T>;
+	OnCreateData?: (instance: Instance, world: World, container: DependenciesContainer) => Partial<T>;
 }
 
 export function Tagged<T>(options: TaggedInstance<T>) {

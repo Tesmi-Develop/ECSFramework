@@ -13,7 +13,8 @@
 		"@ecsframework/core:out/framework/flamecs/registry@Wildcard": "$ecsframework:core:framework/flamecs/registry@Wildcard",
 		"@ecsframework/core:out/framework/components/destroyed-component@DestroyComponent": "$ecsframework:core:framework/components/destroyed-component@DestroyComponent",
 		"@ecsframework/core:out/framework/decorators/inject-type@InjectType": "$ecsframework:core:framework/decorators/inject-type@InjectType",
-		"@ecsframework/core:out/framework/decorators/tagged@TaggedInstance": "$ecsframework:core:framework/decorators/tagged@TaggedInstance"
+		"@ecsframework/core:out/framework/decorators/tagged@TaggedInstance": "$ecsframework:core:framework/decorators/tagged@TaggedInstance",
+		"@ecsframework/core:out/framework/flamecs/registry@Tag": "$ecsframework:core:framework/flamecs/registry@Tag"
 	},
 	"metadata": {},
 	"identifierPrefix": "$ecsframework:core",

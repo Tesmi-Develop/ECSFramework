@@ -39,7 +39,11 @@ export class RobloxInstanceSystem extends BaseSystem {
 			CollectionService.GetTagged(options.Tag).forEach((instance) => {
 				const entity = this.GetEntityFromInstance(instance) ?? this.world.entity();
 
-				this.SetComponent(entity, options.OnCreateData(instance, this.world, this.container), key as never);
+				this.SetComponent(
+					entity,
+					options.OnCreateData?.(instance, this.world, this.container) ?? {},
+					key as never,
+				);
 				this.SetComponent<RobloxInstanceComponent>(entity, {
 					Instance: instance,
 				});
@@ -53,7 +57,11 @@ export class RobloxInstanceSystem extends BaseSystem {
 
 			CollectionService.GetInstanceAddedSignal(options.Tag).Connect((instance) => {
 				const entity = this.GetEntityFromInstance(instance) ?? this.world.entity();
-				this.SetComponent(entity, options.OnCreateData(instance, this.world, this.container), key as never);
+				this.SetComponent(
+					entity,
+					options.OnCreateData?.(instance, this.world, this.container) ?? {},
+					key as never,
+				);
 				this.SetComponent<RobloxInstanceComponent>(entity, {
 					Instance: instance,
 				});
