@@ -1,4 +1,3 @@
-// replication-system.ts
 import { produce } from "@rbxts/immut";
 import { Entity } from "@rbxts/jecs";
 import { Players, RunService } from "@rbxts/services";
@@ -7,7 +6,7 @@ import Signal from "@rbxts/signal";
 import { ConnectedPlayersComponent } from "../components/connected-players-component";
 import { ReplicationComponent, ReplicationData, ReplicationType } from "../components/replication-component";
 import { ReplicatedTag } from "../decorators/replicated";
-import patch from "../patch";
+import patch, { diff } from "../patch";
 import { SyncData } from "../types";
 
 import {
@@ -66,7 +65,15 @@ export class ReplicationSystem extends BaseSystem {
 					{ payloadType: "init" | "patch"; data: unknown }
 				>;
 				playerData.set(tostring(entity), componentContainer);
-				componentContainer.set(component as ComponentKey<unknown>, { payloadType: "init", data });
+				componentContainer.set(
+					component as ComponentKey<unknown>,
+					this.generatePayload(
+						"init",
+						this.GetComponent(entity, component as ComponentKey<unknown>),
+						undefined,
+						replicationOption.unsyncedProperties,
+					),
+				);
 			}
 		}
 
@@ -110,11 +117,58 @@ export class ReplicationSystem extends BaseSystem {
 				{ payloadType: "init" | "patch"; data: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
-			componentContainer.set(componentKey as ComponentKey<unknown>, { payloadType: "init", data: componentData });
+			componentContainer.set(
+				componentKey as ComponentKey<unknown>,
+				this.generatePayload(
+					"init",
+					this.GetComponent(entity, componentKey as ComponentKey<unknown>),
+					undefined,
+					replicationOption.unsyncedProperties,
+				),
+			);
 		}
 
 		if (playerData.isEmpty()) return;
 		this.OnSync.Fire(player, playerData);
+	}
+
+	private generatePayload(
+		payloadType: "init" | "patch",
+		data: unknown,
+		prevData?: unknown,
+		exludeProperties?: Set<string>,
+	) {
+		if (payloadType === "init") {
+			if (!exludeProperties)
+				return {
+					payloadType,
+					data,
+				};
+
+			if (exludeProperties && !typeIs(data, "table"))
+				return {
+					payloadType,
+					data,
+				};
+
+			const cloned = table.clone(data as Record<string, unknown>);
+			for (const element of exludeProperties) {
+				cloned[element] = undefined;
+			}
+
+			return {
+				payloadType: "init" as const,
+				data: cloned,
+			};
+		}
+
+		if (prevData === undefined) return { payloadType, data };
+
+		const patch = diff(prevData, data, exludeProperties);
+		return {
+			payloadType,
+			data: patch,
+		};
 	}
 
 	private prepareAddedEntitySyncData(
@@ -125,6 +179,17 @@ export class ReplicationSystem extends BaseSystem {
 		const replicationData = this.getReplicationData(entity, componentKey);
 		if (replicationData === undefined || replicationData.connectedPlayers.isEmpty()) return;
 
+		const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
+			this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
+		)!;
+
+		const patch = this.generatePayload(
+			"init",
+			this.GetComponent(entity, componentKey),
+			undefined,
+			replicationOption.unsyncedProperties,
+		);
+
 		for (const player of replicationData.connectedPlayers) {
 			const playerData = playerPayload.get(player) ?? new Map();
 			playerPayload.set(player, playerData);
@@ -134,11 +199,7 @@ export class ReplicationSystem extends BaseSystem {
 				{ payloadType: "init" | "patch"; data: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
-
-			componentContainer.set(componentKey, {
-				payloadType: "init",
-				data: this.GetComponent(entity, componentKey),
-			});
+			componentContainer.set(componentKey, patch);
 		}
 	}
 
@@ -152,7 +213,12 @@ export class ReplicationSystem extends BaseSystem {
 		const replicationData = this.getReplicationData(entity, componentKey);
 		if (replicationData === undefined || replicationData.connectedPlayers.isEmpty()) return;
 
-		const payload = patch.diff(data, prevData);
+		const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
+			this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
+		)!;
+
+		const patch = this.generatePayload("patch", data, prevData, replicationOption.unsyncedProperties);
+
 		for (const player of replicationData.connectedPlayers) {
 			const playerData = playerPayload.get(player) ?? new Map();
 			playerPayload.set(player, playerData);
@@ -162,7 +228,7 @@ export class ReplicationSystem extends BaseSystem {
 				{ payloadType: "init" | "patch"; data: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
-			componentContainer.set(componentKey, { payloadType: "patch", data: payload });
+			componentContainer.set(componentKey, patch);
 		}
 	}
 
@@ -184,7 +250,6 @@ export class ReplicationSystem extends BaseSystem {
 			>;
 			playerData.set(tostring(entity), componentContainer);
 
-			// mark component removed for this entity for that player
 			(componentContainer as Map<ComponentKey<unknown>, unknown>).set(componentKey, {
 				__removed: true,
 			} as never);

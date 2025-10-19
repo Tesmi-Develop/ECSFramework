@@ -2,7 +2,7 @@ import { Constructor } from "@flamework/core/out/utility";
 import { World } from "@rbxts/jecs";
 import { DependenciesContainer } from "../dependencies-container";
 import { Tag } from "../flamecs";
-import { DefineClassComponentMeta, GetIdentifier } from "../utilities";
+import { DefineComponentMeta, GetIdentifier } from "../utilities";
 
 export interface TaggedInstance<T> {
 	Tag: string;
@@ -11,6 +11,6 @@ export interface TaggedInstance<T> {
 
 export function Tagged<T>(options: TaggedInstance<T>) {
 	return function (target: Constructor<T>) {
-		DefineClassComponentMeta<TaggedInstance<unknown>>(GetIdentifier(target), options);
+		DefineComponentMeta<TaggedInstance<unknown>>(GetIdentifier(target), options);
 	};
 }

@@ -45,12 +45,20 @@ export class ReceiveReplicationSystem extends BaseSystem {
 				{ data: unknown; payloadType: "init" | "patch" }
 			>) {
 				if ((payload as RemoveTag).__removed) {
-					this.RemoveComponent(clientEntity, componentId as ComponentKey<unknown>);
+					this.RemoveComponent(clientEntity, componentId);
 					continue;
 				}
 
 				if (payload.payloadType === "init") {
-					this.SetComponent(clientEntity, payload.data, componentId as ComponentKey<unknown>);
+					if (this.HasComponent(clientEntity, componentId as ComponentKey<unknown>)) {
+						const currentState = this.GetComponent(clientEntity, componentId as ComponentKey<unknown>);
+						const newState = patch.apply(currentState, payload.data);
+
+						this.SetComponent(clientEntity, newState, componentId);
+						continue;
+					}
+
+					this.SetComponent(clientEntity, payload.data, componentId);
 					continue;
 				}
 
@@ -67,7 +75,7 @@ export class ReceiveReplicationSystem extends BaseSystem {
 					payload.data,
 				);
 
-				this.SetComponent(clientEntity, newState, componentId as ComponentKey<unknown>);
+				this.SetComponent(clientEntity, newState, componentId);
 			}
 		}
 	}

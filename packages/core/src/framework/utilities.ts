@@ -39,7 +39,7 @@ export const SERVER_ATTRIBUTE_ENTITY_ID = `__Server_EntityId`;
 /**
  * @metadata macro
  */
-export function DefineClassComponentMeta<T>(targetId: string, value: unknown, key?: ComponentKey<T>): void {
+export function DefineComponentMeta<T>(targetId: string, value: unknown, key?: ComponentKey<T>): void {
 	const metadata = [key, value] as const;
 
 	const datas =
@@ -50,6 +50,16 @@ export function DefineClassComponentMeta<T>(targetId: string, value: unknown, ke
 	const componentMetadata = datas[targetId] ?? [];
 	componentMetadata.push(metadata as [ComponentKey<unknown>, unknown]);
 	datas[targetId] = componentMetadata;
+}
+
+/**
+ * @metadata macro
+ */
+export function GetComponentMeta<T>(targetId: string, key?: ComponentKey<T>): unknown {
+	const datas =
+		(Reflect.getOwnMetadata(BaseSystem, "ECSFramework:Meta") as Record<string, Array<[string, unknown]>>) ?? {};
+
+	return datas[targetId]?.find(([k]) => k === key)?.[1];
 }
 
 export function ApplyComponentMeta(componentRuntimeId: Entity, componentId: string, world: World): void {
