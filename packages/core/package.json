@@ -1,6 +1,6 @@
 {
   "name": "@ecsframework/core",
-  "version": "0.3.5",
+  "version": "0.3.8",
   "description": "",
   "main": "out/init.lua",
   "scripts": {
@@ -37,7 +37,7 @@
   "peerDependencies": {
     "@flamework/core": "*",
     "@rbxts/immut": ">=0.4.4-ts.0",
-    "@rbxts/jecs": ">=0.9.0-rc.10",
+    "@rbxts/jecs": "*",
     "@rbxts/services": ">=1.5.5",
     "@rbxts/signal": ">=1.1.1",
     "rbxts-transformer-flamework": "*"

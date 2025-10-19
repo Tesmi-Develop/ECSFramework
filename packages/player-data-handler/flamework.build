@@ -4,7 +4,8 @@
 	"identifiers": {
 		"@ecsframework/player-data-handler:out/profile-wrapper@ProfileWrapper": "$ecsframework:player-data-handler:profile-wrapper@ProfileWrapper",
 		"@ecsframework/player-data-handler:out/systems/saving-system@SavingSystem": "$ecsframework:player-data-handler:systems/saving-system@SavingSystem",
-		"@ecsframework/player-data-handler:out/decorators/saved@SavedTag": "$ecsframework:player-data-handler:decorators/saved@SavedTag"
+		"@ecsframework/player-data-handler:out/decorators/saved@SavedTag": "$ecsframework:player-data-handler:decorators/saved@SavedTag",
+		"@ecsframework/player-data-handler:out/types@SavedData": "$ecsframework:player-data-handler:types@SavedData"
 	},
 	"metadata": {},
 	"identifierPrefix": "$ecsframework:player-data-handler",

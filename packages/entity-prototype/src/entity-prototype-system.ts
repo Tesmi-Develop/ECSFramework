@@ -7,10 +7,14 @@ import { EntityPrototype } from "./entity-prototype";
 })
 export class EntityPrototypeSystem extends BaseSystem {
 	public static Instance: EntityPrototypeSystem;
-	private handler = new PrototypeHandler();
+	private handler?: PrototypeHandler;
 
 	OnStartup(): void {
 		EntityPrototypeSystem.Instance = this;
+	}
+
+	public SetHandler(handler: PrototypeHandler) {
+		this.handler = handler;
 	}
 
 	public GetHandler() {
@@ -37,8 +41,16 @@ export class EntityPrototypeSystem extends BaseSystem {
 		return entity;
 	}
 
+	private validateHandler() {
+		if (!this.handler) {
+			throw "Prototype handler is not set";
+		}
+	}
+
 	public TryInstantiate(prototypeId: string) {
-		const [success, prototype] = this.handler.TryIndex<EntityPrototype>(prototypeId);
+		this.validateHandler();
+
+		const [success, prototype] = this.handler!.TryIndex<EntityPrototype>(prototypeId);
 		if (!success) {
 			return [false, undefined] as const;
 		}
@@ -48,7 +60,9 @@ export class EntityPrototypeSystem extends BaseSystem {
 	}
 
 	public Instantiate(prototypeId: string) {
-		const [success, prototype] = this.handler.TryIndex<EntityPrototype>(prototypeId);
+		this.validateHandler();
+
+		const [success, prototype] = this.handler!.TryIndex<EntityPrototype>(prototypeId);
 		if (!success) {
 			throw `Prototype ${prototypeId} does not exist`;
 		}

@@ -1,6 +1,6 @@
 {
   "name": "@ecsframework/player-data-handler",
-  "version": "0.0.1",
+  "version": "0.1.2",
   "description": "",
   "main": "out/init.lua",
   "scripts": {
@@ -41,7 +41,7 @@
     "@rbxts/t": "^3.2.1"
   },
   "peerDependencies": {
-    "@ecsframework/core": "^0.0.4",
+    "@ecsframework/core": "*",
     "@flamework/core": "*",
     "@rbxts/jecs": ">=0.9.0-rc.10",
     "rbxts-transformer-flamework": "*"

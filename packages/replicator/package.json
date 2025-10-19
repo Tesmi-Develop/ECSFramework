@@ -1,6 +1,6 @@
 {
   "name": "@ecsframework/replicator",
-  "version": "0.1.3",
+  "version": "0.2.1",
   "description": "",
   "main": "out/init.lua",
   "scripts": {
@@ -35,7 +35,7 @@
     "typescript": "^5.5.3"
   },
   "peerDependencies": {
-    "@ecsframework/core": "^0.3.5",
+    "@ecsframework/core": "*",
     "@flamework/core": "*",
     "@rbxts/immut": "*",
     "@rbxts/jecs": ">=0.9.0-rc.10",

@@ -2,11 +2,10 @@ import { BaseSystem, ComponentKey } from "@ecsframework/core";
 import { VoidCallback } from "@ecsframework/core/out/framework/utilities";
 import { Entity, World } from "@rbxts/jecs";
 import { t } from "@rbxts/t";
-import { SavedTag } from "./decorators/saved";
-import { SavedOption } from "./types";
 import { produce } from "@rbxts/immut";
 import { Constructor } from "@flamework/core/out/utility";
 import { DependenciesContainer } from "@ecsframework/core/out/framework/dependencies-container";
+import { SavedData } from "./types";
 
 export interface ComponentInfo {
 	Guard: t.check<unknown>;
@@ -36,10 +35,10 @@ export abstract class ProfileWrapper {
 		protected readonly container: DependenciesContainer,
 		private onClose: VoidCallback,
 	) {
-		for (const componentId of system.Each<SavedTag>()) {
+		for (const componentId of system.Each<SavedData>()) {
 			const savedComponent = system.GetComponentKey<string>(componentId)!;
 			const ctor = system.GetClassComponent(savedComponent as ComponentKey<unknown>);
-			const options = system.GetComponent<SavedTag>(componentId) as unknown as SavedOption<object>;
+			const options = system.GetComponent<SavedData>(componentId)!;
 
 			if (options.Guard === undefined) {
 				throw `No guard found for ${savedComponent}`;

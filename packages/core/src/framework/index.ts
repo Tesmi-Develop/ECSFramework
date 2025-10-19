@@ -15,7 +15,9 @@ import planckRunService, { Phases } from "@rbxts/planck-runservice";
 
 interface SystemInfo {
 	Instance: BaseSystem;
+	OnPreStartup?: (context: object) => void;
 	OnStartup?: (context: object) => void;
+	OnPostStartup?: (context: object) => void;
 	OnEffect?: (context: object) => void;
 	OnUpdate?: (context: object, dt: number) => void;
 	Options: SystemOptions;
@@ -117,7 +119,9 @@ export class ECSFramework {
 
 				return {
 					Instance: instance as BaseSystem,
+					OnPreStartup: getCachedMethod(instance, "OnPreStartup", BaseSystem),
 					OnStartup: getCachedMethod(instance, "OnStartup", BaseSystem),
+					OnPostStartup: getCachedMethod(instance, "OnPostStartup", BaseSystem),
 					OnEffect: getCachedMethod(instance, "OnEffect", BaseSystem),
 					OnUpdate: getCachedMethod(instance, "OnUpdate", BaseSystem),
 					Options: options,
@@ -128,6 +132,22 @@ export class ECSFramework {
 	}
 
 	private invokeStartup() {
+		// On pre-startup
+		for (const system of this.systems) {
+			if (system.OnPreStartup === undefined) continue;
+
+			this.Scheduler.addSystem({
+				name: `${getmetatable(system.Instance)}-PreStartup`,
+				phase: Phase.PreStartup,
+				system: () => {
+					start(system.Instance.__hookStates, system.Instance, this.world, () =>
+						system.OnPreStartup!(system.Instance),
+					);
+				},
+			});
+		}
+
+		// On startup
 		for (const system of this.systems) {
 			if (system.OnStartup === undefined) continue;
 
@@ -137,6 +157,21 @@ export class ECSFramework {
 				system: () => {
 					start(system.Instance.__hookStates, system.Instance, this.world, () =>
 						system.OnStartup!(system.Instance),
+					);
+				},
+			});
+		}
+
+		// On post-startup
+		for (const system of this.systems) {
+			if (system.OnPostStartup === undefined) continue;
+
+			this.Scheduler.addSystem({
+				name: `${getmetatable(system.Instance)}-PostStartup`,
+				phase: Phase.PostStartup,
+				system: () => {
+					start(system.Instance.__hookStates, system.Instance, this.world, () =>
+						system.OnPostStartup!(system.Instance),
 					);
 				},
 			});

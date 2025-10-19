@@ -545,7 +545,10 @@ export abstract class BaseSystem {
 	//#endregion
 
 	//#region Lifecycle
+	public OnPreStartup() {}
 	public OnStartup() {}
+	public OnPostStartup() {}
+
 	public OnUpdate() {}
 	public OnEffect() {}
 	//#endregion

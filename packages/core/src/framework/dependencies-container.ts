@@ -52,7 +52,7 @@ export class DependenciesContainer {
 
 	/** @metadata macro */
 	public Resolve<T>(spec?: Modding.Generic<T, "id">, ctor?: Constructor) {
-		return this.resolve(spec as never, ctor);
+		return this.resolve(spec as never, ctor) as T;
 	}
 
 	public Inject(instance: object, handle?: (injecting: unknown) => void) {
