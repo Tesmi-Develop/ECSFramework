@@ -6,6 +6,7 @@ import { produce } from "@rbxts/immut";
 import { Constructor } from "@flamework/core/out/utility";
 import { DependenciesContainer } from "@ecsframework/core/out/framework/dependencies-container";
 import { SavedData } from "./types";
+import { Deserialize, Serialize } from "./serilizator";
 
 export interface ComponentInfo {
 	Guard: t.check<unknown>;
@@ -149,16 +150,16 @@ export abstract class ProfileWrapper {
 		}
 
 		this.isLoaded = true;
-		const data = await this.onLoadProfile();
+		const playerData = await this.onLoadProfile();
 
-		for (const [componentName, componentData] of data) {
+		for (const [componentName, componentData] of playerData) {
 			if (!typeIs(componentData, "table")) {
 				throw `Data for ${componentName} is not a table`;
 			}
 
 			if (componentData.Version === undefined) {
 				this.changeData(
-					produce(data, (draft) => {
+					produce(playerData, (draft) => {
 						draft.get(componentName)!.Version = 0;
 					}),
 				);
@@ -166,7 +167,7 @@ export abstract class ProfileWrapper {
 
 			if (componentData.Data === undefined) {
 				this.changeData(
-					produce(data, (draft) => {
+					produce(playerData, (draft) => {
 						draft.get(componentName)!.Data = {};
 					}),
 				);
@@ -175,34 +176,51 @@ export abstract class ProfileWrapper {
 			const componentInfo = this.savedComponents.get(componentName);
 			if (componentInfo === undefined) continue;
 
-			let currentData = componentData.Data;
+			let currentComponentData = Deserialize(componentData.Data, {
+				World: this.world,
+			});
 			let currentVersion = componentData.Version;
 
 			if (componentInfo.Migrations.size() > componentData.Version) {
 				for (let i = componentData.Version; i < componentInfo.Migrations.size(); i++) {
-					currentData = componentInfo.Migrations[i](currentData);
+					currentComponentData = componentInfo.Migrations[i](currentComponentData);
 					currentVersion++;
 				}
 			}
 
-			if (!componentInfo.Guard(currentData)) {
+			if (!componentInfo.Guard(currentComponentData)) {
 				throw `Guard failed for ${componentName}`;
 			}
 
 			this.changeData(
-				produce(data, (draft) => {
-					draft.get(componentName)!.Data = currentData;
+				produce(playerData, (draft) => {
+					draft.get(componentName)!.Data = currentComponentData;
 					draft.get(componentName)!.Version = currentVersion;
 				}),
 			);
 		}
 
 		this.subscribeToComponents();
-		return data;
+		return playerData;
+	}
+
+	private serializeComponentData(data: Map<string, ComponentData>): Map<string, ComponentData> {
+		const serializedData: Map<string, ComponentData> = table.clone(data);
+
+		for (const [componentName, componentData] of serializedData) {
+			serializedData.set(componentName, {
+				Data: Serialize(componentData.Data, {
+					World: this.world,
+				}),
+				Version: componentData.Version,
+			});
+		}
+
+		return serializedData;
 	}
 
 	public async SaveProfile() {
-		return this.onSaveProfile(await this.LoadProfile());
+		return this.onSaveProfile(this.serializeComponentData(await this.LoadProfile()));
 	}
 
 	public async CloseProfile() {
@@ -211,7 +229,7 @@ export abstract class ProfileWrapper {
 		}
 
 		this.isClosed = true;
-		if (this.isSaveDataWhenClose) await this.onSaveProfile(this.data);
+		if (this.isSaveDataWhenClose) await this.onSaveProfile(this.serializeComponentData(this.data));
 		await this.onCloseProfile();
 		this.connections.forEach((disconnect) => disconnect());
 

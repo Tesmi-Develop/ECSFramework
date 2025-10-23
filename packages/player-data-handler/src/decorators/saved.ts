@@ -2,6 +2,7 @@ import { DefineClassComponentMeta } from "@ecsframework/core";
 import { Modding } from "@flamework/core";
 import { Constructor } from "@flamework/core/out/utility";
 import { SavedData } from "../types";
+import { GetIdentifier } from "@ecsframework/core/out/framework/utilities";
 
 type ConvertInObject<T> = { [P in keyof T]: T[P] };
 
@@ -12,6 +13,6 @@ export function Saved<T extends object>(
 ) {
 	return function (target: Constructor<T>) {
 		options.Guard = guard as never;
-		DefineClassComponentMeta<SavedData>(target as never, options);
+		DefineClassComponentMeta<SavedData>(GetIdentifier(target), options);
 	};
 }
