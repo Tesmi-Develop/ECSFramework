@@ -8,3 +8,5 @@ export interface SavedData<T extends object = object> {
 	Guard?: t.check<unknown>;
 	OnCreate?: (world: World, container: DependenciesContainer, system: BaseSystem) => T;
 }
+
+export interface SerializableComponent {}

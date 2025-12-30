@@ -27,6 +27,11 @@ export class RobloxInstanceSystem extends BaseSystem {
 				throw "Instance already has an entity";
 			}
 			data.Instance.SetAttribute(INSTANCE_ATTRIBUTE_ENTITY_ID, entity);
+			data.Instance.AncestryChanged.Once((_, parent) => {
+				if (parent !== undefined) return;
+				if (!this.ExistEntity(entity)) return;
+				this.DespawnEntity(entity);
+			});
 		});
 
 		this.Removed<RobloxInstanceComponent>().connect((entity) => {
@@ -47,12 +52,6 @@ export class RobloxInstanceSystem extends BaseSystem {
 				this.SetComponent<RobloxInstanceComponent>(entity, {
 					Instance: instance,
 				});
-
-				instance.AncestryChanged.Once((_, parent) => {
-					if (parent !== undefined) return;
-					if (!this.ExistEntity(entity)) return;
-					this.DespawnEntity(entity);
-				});
 			});
 
 			CollectionService.GetInstanceAddedSignal(options.Tag).Connect((instance) => {
@@ -64,12 +63,6 @@ export class RobloxInstanceSystem extends BaseSystem {
 				);
 				this.SetComponent<RobloxInstanceComponent>(entity, {
 					Instance: instance,
-				});
-
-				instance.AncestryChanged.Once((_, parent) => {
-					if (parent !== undefined) return;
-					if (!this.ExistEntity(entity)) return;
-					this.DespawnEntity(entity);
 				});
 			});
 

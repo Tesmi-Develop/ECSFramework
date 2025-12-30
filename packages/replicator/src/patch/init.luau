@@ -55,6 +55,7 @@ local function diff(prevState: { [any]: any }, nextState: { [any]: any }, exclud
 		local current = nextState[key]
 
 		if excludeProps and excludeProps[key] then
+			patches[key] = nil
 			continue
 		end
 
@@ -64,6 +65,12 @@ local function diff(prevState: { [any]: any }, nextState: { [any]: any }, exclud
 			patches[key] = None
 		elseif type(previous) == "table" and type(current) == "table" then
 			patches[key] = diff(previous, current, nil, serialize)
+		end
+	end
+
+	if excludeProps then
+		for key in next, excludeProps do
+			patches[key] = nil
 		end
 	end
 

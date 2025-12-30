@@ -54,6 +54,10 @@ export abstract class ProfileWrapper {
 		}
 	}
 
+	public GetIsClosed() {
+		return this.isClosed;
+	}
+
 	protected abstract onLoadProfile(): Promise<Map<string, ComponentData>>;
 	protected abstract onSaveProfile(data: Map<string, ComponentData>): Promise<void>;
 	protected abstract onCloseProfile(): Promise<void>;
@@ -150,7 +154,8 @@ export abstract class ProfileWrapper {
 		}
 
 		this.isLoaded = true;
-		const playerData = await this.onLoadProfile();
+		let playerData = await this.onLoadProfile();
+		let newPlayerData = playerData;
 
 		for (const [componentName, componentData] of playerData) {
 			if (!typeIs(componentData, "table")) {
@@ -177,6 +182,7 @@ export abstract class ProfileWrapper {
 			if (componentInfo === undefined) continue;
 
 			let currentComponentData = Deserialize(componentData.Data, {
+				System: this.system,
 				World: this.world,
 			});
 			let currentVersion = componentData.Version;
@@ -192,16 +198,16 @@ export abstract class ProfileWrapper {
 				throw `Guard failed for ${componentName}`;
 			}
 
-			this.changeData(
-				produce(playerData, (draft) => {
-					draft.get(componentName)!.Data = currentComponentData;
-					draft.get(componentName)!.Version = currentVersion;
-				}),
-			);
+			newPlayerData = produce(newPlayerData, (draft) => {
+				draft.get(componentName)!.Data = currentComponentData;
+				draft.get(componentName)!.Version = currentVersion;
+			});
+
+			this.changeData(newPlayerData);
 		}
 
 		this.subscribeToComponents();
-		return playerData;
+		return newPlayerData;
 	}
 
 	private serializeComponentData(data: Map<string, ComponentData>): Map<string, ComponentData> {
@@ -210,6 +216,7 @@ export abstract class ProfileWrapper {
 		for (const [componentName, componentData] of serializedData) {
 			serializedData.set(componentName, {
 				Data: Serialize(componentData.Data, {
+					System: this.system,
 					World: this.world,
 				}),
 				Version: componentData.Version,

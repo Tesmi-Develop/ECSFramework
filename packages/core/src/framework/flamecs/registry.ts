@@ -631,4 +631,5 @@ export function pair<P>(registry: ecs.World, object: Entity, predicate?: Compone
 export function initWorld(registry: ecs.World) {
 	reserve<Wildcard>(registry, ecs.Wildcard as never);
 	reserve<ChildOf>(registry, ecs.ChildOf as never);
+	reserve<Name>(registry, ecs.Name);
 }

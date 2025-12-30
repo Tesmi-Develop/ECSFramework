@@ -6,7 +6,7 @@ import { GetIdentifier } from "@ecsframework/core/out/framework/utilities";
 
 export interface ReplicatedTag<T> {
 	resolvePlayerConnection?: (player: Player, entity: Entity, data: T, system: ReplicationSystem) => boolean;
-	unsyncedProperties?: Set<string>; 
+	unsyncedProperties?: Set<string>;
 }
 
 export function Replicated<T>(options: ReplicatedTag<T> = {}) {

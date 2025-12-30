@@ -7,7 +7,7 @@ import { ConnectedPlayersComponent } from "../components/connected-players-compo
 import { ReplicationComponent, ReplicationData, ReplicationType } from "../components/replication-component";
 import { ReplicatedTag } from "../decorators/replicated";
 import patch, { diff } from "../patch";
-import { SyncData } from "../types";
+import { PrevSyncData, RemoveTag, SyncData } from "../types";
 
 import {
 	BaseSystem,
@@ -25,7 +25,7 @@ export class ReplicationSystem extends BaseSystem {
 	public readonly OnSync = new Signal<(player: Player, data: SyncData) => void>();
 	private connectedPlayersEntity!: Entity;
 	private networkComponents: string[] = [];
-	private playerPayload?: Map<Player, SyncData>;
+	private playerPayload?: Map<Player, PrevSyncData>;
 
 	public ConnectPlayerOnFirstConnection(player: Player): void {
 		const playerData: SyncData = new Map();
@@ -36,8 +36,7 @@ export class ReplicationSystem extends BaseSystem {
 			if (replicationComponent.replicationType !== ReplicationType.OnFirstPlayerConnection) continue;
 
 			for (const component of this.networkComponents) {
-				const data = this.GetComponent(entity, component as ComponentKey<unknown>);
-				if (data === undefined) continue;
+				if (!this.HasComponent(entity, component as ComponentKey<unknown>)) continue;
 
 				const replicationData = this.getReplicationData(entity, component as ComponentKey<unknown>);
 				if (replicationData === undefined || replicationData.connectedPlayers.has(player)) continue;
@@ -48,7 +47,12 @@ export class ReplicationSystem extends BaseSystem {
 
 				if (
 					replicationOption.resolvePlayerConnection &&
-					!replicationOption.resolvePlayerConnection(player, entity, replicationData, this)
+					!replicationOption.resolvePlayerConnection(
+						player,
+						entity,
+						this.GetComponent(entity, component as ComponentKey<unknown>),
+						this,
+					)
 				)
 					continue;
 
@@ -88,8 +92,7 @@ export class ReplicationSystem extends BaseSystem {
 		if (replicationData === undefined) return;
 
 		for (const componentKey of this.networkComponents) {
-			const componentData = this.GetComponent(entity, componentKey as ComponentKey<unknown>);
-			if (componentData === undefined) continue;
+			if (!this.HasComponent(entity, componentKey as ComponentKey<unknown>)) continue;
 
 			const replicationComponent = this.getReplicationData(entity, componentKey as ComponentKey<unknown>);
 			if (replicationComponent === undefined || replicationComponent.connectedPlayers.has(player)) continue;
@@ -100,7 +103,12 @@ export class ReplicationSystem extends BaseSystem {
 
 			if (
 				replicationOption.resolvePlayerConnection &&
-				!replicationOption.resolvePlayerConnection(player, entity, componentData, this)
+				!replicationOption.resolvePlayerConnection(
+					player,
+					entity,
+					this.GetComponent(entity, componentKey as ComponentKey<unknown>),
+					this,
+				)
 			)
 				continue;
 
@@ -174,21 +182,10 @@ export class ReplicationSystem extends BaseSystem {
 	private prepareAddedEntitySyncData(
 		entity: Entity,
 		componentKey: ComponentKey<unknown>,
-		playerPayload: Map<Player, SyncData>,
+		playerPayload: Map<Player, PrevSyncData>,
 	): void {
 		const replicationData = this.getReplicationData(entity, componentKey);
 		if (replicationData === undefined || replicationData.connectedPlayers.isEmpty()) return;
-
-		const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
-			this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
-		)!;
-
-		const patch = this.generatePayload(
-			"init",
-			this.GetComponent(entity, componentKey),
-			undefined,
-			replicationOption.unsyncedProperties,
-		);
 
 		for (const player of replicationData.connectedPlayers) {
 			const playerData = playerPayload.get(player) ?? new Map();
@@ -196,10 +193,13 @@ export class ReplicationSystem extends BaseSystem {
 
 			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 				ComponentKey<unknown>,
-				{ payloadType: "init" | "patch"; data: unknown }
+				{ prevState?: unknown; state?: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
-			componentContainer.set(componentKey, patch);
+			componentContainer.set(componentKey, {
+				state: this.GetComponent(entity, componentKey),
+				prevState: undefined,
+			});
 		}
 	}
 
@@ -208,16 +208,10 @@ export class ReplicationSystem extends BaseSystem {
 		componentKey: ComponentKey<unknown>,
 		data: unknown,
 		prevData: unknown,
-		playerPayload: Map<Player, SyncData>,
+		playerPayload: Map<Player, PrevSyncData>,
 	): void {
 		const replicationData = this.getReplicationData(entity, componentKey);
 		if (replicationData === undefined || replicationData.connectedPlayers.isEmpty()) return;
-
-		const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
-			this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
-		)!;
-
-		const patch = this.generatePayload("patch", data, prevData, replicationOption.unsyncedProperties);
 
 		for (const player of replicationData.connectedPlayers) {
 			const playerData = playerPayload.get(player) ?? new Map();
@@ -225,17 +219,22 @@ export class ReplicationSystem extends BaseSystem {
 
 			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 				ComponentKey<unknown>,
-				{ payloadType: "init" | "patch"; data: unknown }
+				{ prevState?: unknown; state?: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
-			componentContainer.set(componentKey, patch);
+
+			const exitingPatch = componentContainer.get(componentKey);
+			componentContainer.set(componentKey, {
+				state: data,
+				prevState: exitingPatch !== undefined ? exitingPatch.prevState : prevData,
+			});
 		}
 	}
 
 	private prepareRemovedEntitySyncData(
 		entity: Entity,
 		componentKey: ComponentKey<unknown>,
-		playerPayload: Map<Player, SyncData>,
+		playerPayload: Map<Player, PrevSyncData>,
 	): void {
 		const replicationData = this.getReplicationData(entity, componentKey);
 		if (replicationData === undefined) return;
@@ -246,17 +245,17 @@ export class ReplicationSystem extends BaseSystem {
 
 			const componentContainer = (playerData.get(tostring(entity)) ?? new Map()) as Map<
 				ComponentKey<unknown>,
-				{ payloadType: "init" | "patch"; data: unknown }
+				{ prevState?: unknown; state?: unknown }
 			>;
 			playerData.set(tostring(entity), componentContainer);
 
-			(componentContainer as Map<ComponentKey<unknown>, unknown>).set(componentKey, {
+			componentContainer.set(componentKey, {
 				__removed: true,
 			} as never);
 		}
 	}
 
-	private prepareRemoveEntity(entity: Entity, playerPayload: Map<Player, SyncData>): void {
+	private prepareRemoveEntity(entity: Entity, playerPayload: Map<Player, PrevSyncData>): void {
 		for (const player of Players.GetPlayers()) {
 			const playerData = playerPayload.get(player) ?? new Map();
 			playerPayload.set(player, playerData);
@@ -295,9 +294,62 @@ export class ReplicationSystem extends BaseSystem {
 		});
 	}
 
-	private sendSyncData(data: Map<Player, SyncData>): void {
-		for (const [player, payload] of data) {
-			if (payload.isEmpty()) continue;
+	private sendSyncData(data: Map<Player, PrevSyncData>): void {
+		for (const [player, draft] of data) {
+			if (draft.isEmpty()) continue;
+
+			const payload = new Map() as SyncData;
+
+			for (const [entity, componentContainer] of draft) {
+				if ("__removed" in componentContainer) {
+					payload.set(entity, { __removed: true });
+					continue;
+				}
+
+				const entityData = new Map() as Map<
+					string,
+					{ data: unknown; payloadType: "init" | "patch" } | RemoveTag
+				>;
+				payload.set(entity, entityData);
+
+				for (const [componentKey, stateInfo] of componentContainer as Map<
+					string,
+					{ prevState?: unknown; state?: unknown }
+				>) {
+					if ("__removed" in stateInfo) {
+						entityData.set(componentKey, { __removed: true });
+						continue;
+					}
+
+					const replicationOption = this.GetComponent<ReplicatedTag<unknown>>(
+						this.GetComponentId(componentKey as ComponentKey<unknown>) as Entity,
+					)!;
+
+					if (stateInfo.prevState === undefined) {
+						entityData.set(
+							componentKey,
+							this.generatePayload(
+								"init",
+								stateInfo.state,
+								undefined,
+								replicationOption.unsyncedProperties,
+							),
+						);
+						continue;
+					}
+
+					entityData.set(
+						componentKey,
+						this.generatePayload(
+							"patch",
+							stateInfo.state,
+							stateInfo.prevState,
+							replicationOption.unsyncedProperties,
+						),
+					);
+				}
+			}
+
 			this.OnSync.Fire(player, payload);
 		}
 	}
@@ -366,7 +418,7 @@ export class ReplicationSystem extends BaseSystem {
 		);
 	}
 
-	private getPlayerPayload(): Map<Player, SyncData> {
+	private getPlayerPayload(): Map<Player, PrevSyncData> {
 		if (this.playerPayload) return this.playerPayload;
 		this.playerPayload = new Map();
 

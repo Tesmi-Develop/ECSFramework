@@ -53,7 +53,7 @@ export type QueryHandle<T extends Array<unknown>> = {
 	 */
 	pair<P>(object: Entity, predicate?: ComponentKey<P>): QueryHandle<[...T, Unwrap<P>]>;
 	terms?: Array<Id>;
-	querySource: ecs.Query<Array<Id>>;
+	querySource(): ecs.Query<Array<Id>>;
 } & IterableFunction<LuaTuple<[Entity, ...T]>>;
 
 function queryPair<T extends Array<unknown>, P>(
@@ -85,6 +85,24 @@ function queryIter<T extends Array<unknown>>(this: QueryHandle<T>): IterableFunc
 	return (() => {
 		// Do nothing.
 	}) as IterableFunction<LuaTuple<[Entity, ...T]>>;
+}
+
+function querySource<T extends Array<unknown>>(this: QueryHandle<T>): ecs.Query<Array<Id>> {
+	if (this.terms) {
+		let ecsQuery = this.world.query(...this.terms);
+
+		if (this.filterWithout) {
+			ecsQuery = ecsQuery.without(...this.filterWithout);
+		}
+
+		if (this.filterWith) {
+			ecsQuery = ecsQuery.with(...this.filterWith);
+		}
+
+		return ecsQuery;
+	}
+
+	return this.world.query();
 }
 
 export function createQuery<T extends Array<unknown> = []>(
@@ -144,7 +162,8 @@ export function query<T extends Array<unknown> = []>(
 		filterWithout: processedFilterWithout,
 		pair: queryPair,
 		terms: processedTerms,
-	} as QueryHandle<ExtractQueryTypes<T>>;
+		querySource: querySource as never,
+	} as unknown as QueryHandle<ExtractQueryTypes<T>>;
 	setmetatable(queryHandle, queryHandle as LuaMetatable<QueryHandle<ExtractQueryTypes<T>>>);
 	return queryHandle;
 }

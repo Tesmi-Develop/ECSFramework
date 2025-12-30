@@ -13,11 +13,13 @@ export class ReceiveReplicationSystem extends BaseSystem {
 	public readonly OnFirstConnect = new Signal<() => void>();
 	public readonly OnEntityConnect = new Signal<(entity: Entity) => void>();
 	private serverEntitiesToClient = new Map<string, Entity>(); // serverEntityId -> clientEntityId
+	private clientEntitiesToServer = new Map<Entity, string>(); // clientEntityId -> serverEntityId
 
 	public GetClientEntity(serverEntityId: string) {
 		if (!this.serverEntitiesToClient.has(serverEntityId)) {
 			const entity = this.SpawnEntity();
 			this.serverEntitiesToClient.set(serverEntityId, entity);
+			this.clientEntitiesToServer.set(entity, serverEntityId);
 			return entity;
 		}
 
@@ -25,10 +27,15 @@ export class ReceiveReplicationSystem extends BaseSystem {
 		if (!this.ExistEntity(entity)) {
 			const entity = this.SpawnEntity();
 			this.serverEntitiesToClient.set(serverEntityId, entity);
+			this.clientEntitiesToServer.set(entity, serverEntityId);
 			return entity;
 		}
 
 		return entity;
+	}
+
+	public GetServerEntity(clientEntityId: Entity) {
+		return this.clientEntitiesToServer.get(clientEntityId);
 	}
 
 	public Sync(payload: SyncData) {
@@ -37,6 +44,7 @@ export class ReceiveReplicationSystem extends BaseSystem {
 			if ((components as RemoveTag).__removed) {
 				this.DespawnEntity(clientEntity);
 				this.serverEntitiesToClient.delete(serverEntity);
+				this.clientEntitiesToServer.delete(clientEntity);
 				continue;
 			}
 
@@ -87,6 +95,7 @@ export class ReceiveReplicationSystem extends BaseSystem {
 			if (serverEntityId === undefined) return;
 
 			this.serverEntitiesToClient.set(tostring(serverEntityId), entity);
+			this.clientEntitiesToServer.set(entity, tostring(serverEntityId));
 			this.OnEntityConnect.Fire(serverEntityId as Entity);
 		});
 
@@ -97,6 +106,7 @@ export class ReceiveReplicationSystem extends BaseSystem {
 			if (serverEntityId === undefined) return;
 
 			this.serverEntitiesToClient.set(tostring(serverEntityId), entity);
+			this.clientEntitiesToServer.set(entity, tostring(serverEntityId));
 			this.OnEntityConnect.Fire(serverEntityId as Entity);
 		}
 
@@ -107,6 +117,7 @@ export class ReceiveReplicationSystem extends BaseSystem {
 		for (const [serverEntityId, clientEntityId] of this.serverEntitiesToClient) {
 			if (!this.ExistEntity(clientEntityId)) {
 				this.serverEntitiesToClient.delete(serverEntityId);
+				this.clientEntitiesToServer.delete(clientEntityId);
 			}
 		}
 	}
